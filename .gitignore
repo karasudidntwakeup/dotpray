@@ -5,6 +5,7 @@ build/
 
 # Machine-local configuration
 local.properties
+keystore.properties
 
 # IDE
 .idea/
