@@ -3,27 +3,24 @@ package dev.karasu.ndotprayer.widget
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
-import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
-import android.widget.RemoteViews
-import dev.karasu.ndotprayer.R
+import android.util.Log
 import dev.karasu.ndotprayer.data.Prefs
 import dev.karasu.ndotprayer.data.PrayerRepository
-import dev.karasu.ndotprayer.data.Snapshot
 import dev.karasu.ndotprayer.util.Io
 import dev.karasu.ndotprayer.util.RefreshJob
-import android.util.Log
 
 /**
- * The widget: black panel, NDot countdown (a live [Chronometer]), the next
- * prayer, a segmented bar, and all five times of the day. One size, resizable.
+ * The provider the launcher and the system talk to: black panel, NDot countdown
+ * (a live Chronometer), the next prayer, a segmented bar, and all five times of
+ * the day. One layout family, resizable.
  *
- * The countdown itself runs host-side, so the app's alarms only mark the
- * boundaries: the flip at each prayer (exact, plus a safety re-render) and the
- * two countdown-format switches.
+ * It has to be exported for APPWIDGET_UPDATE to arrive, so it does only what
+ * that callback can legitimately ask for. The app's own boundary alarms go to
+ * [FlipReceiver] instead, which nothing outside the app can reach.
  */
 class PrayerWidgetProvider : AppWidgetProvider() {
 
@@ -32,9 +29,13 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         appWidgetManager: AppWidgetManager,
         appWidgetIds: IntArray,
     ) {
+        // The ids that arrive with the broadcast are ignored on purpose: ask the
+        // system for this provider's own widgets, so an update that did not come
+        // from the launcher cannot point us at widgets we do not own.
+        val ids = appWidgetManager.getAppWidgetIds(component(context))
         val snapshot = PrayerRepository.snapshot(context)
         val prefs = Prefs.get(context)
-        appWidgetIds.forEach { id ->
+        ids.forEach { id ->
             appWidgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot, prefs))
         }
         reschedule(context)
@@ -47,6 +48,9 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         appWidgetId: Int,
         newOptions: android.os.Bundle,
     ) {
+        // Also delivered through the exported receiver: only repaint ids that
+        // actually belong to this provider.
+        if (appWidgetId !in appWidgetManager.getAppWidgetIds(component(context))) return
         val prefs = Prefs.get(context)
         appWidgetManager.updateAppWidget(
             appWidgetId,
@@ -65,51 +69,30 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         AlarmHelper.cancel(context)
     }
 
-    override fun onReceive(context: Context, intent: Intent) {
-        when (intent.action) {
-            AlarmHelper.ACTION_FLIP -> {
-                val widgetManager = AppWidgetManager.getInstance(context)
-                val ids = widgetManager.getAppWidgetIds(
-                    ComponentName(context, PrayerWidgetProvider::class.java),
-                )
-                val snapshot = PrayerRepository.snapshot(context)
-                val prefs = Prefs.get(context)
-                ids.forEach { id ->
-                    widgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot, prefs))
-                }
-                reschedule(context)
-                refreshIfNeeded(context)
-            }
-            else -> super.onReceive(context, intent)
-        }
-    }
-
-    /** Heals the cache: the process is alive and network-allowed while the widget
- *  broadcasts run, so the refresh happens right here instead of waiting for a job. */
-    private fun refreshIfNeeded(context: Context) {
-        if (!PrayerRepository.needsRefresh(context)) return
-        Io.io {
-            PrayerRepository.refresh(context)
-            Io.main { refreshNow(context) }
-        }
-        // Passive fallback tied to the scheduler, in case this pass failed.
-        if (PrayerRepository.needsRefresh(context)) RefreshJob.scheduleNow(context)
-    }
-
-    private fun reschedule(context: Context) {
-        val next = PrayerRepository.snapshot(context)?.next ?: return
-        AlarmHelper.schedule(context, next.timeMillis)
-    }
-
-    /** Repaints every placed widget and re-arms the boundary alarm. */
-    fun refreshNow(context: Context) {
-        WidgetRenderer.push(context)
-        reschedule(context)
-    }
-
     companion object {
-        const val ACTION_REFRESH = "dev.karasu.ndotprayer.REFRESH"
 
+        private fun component(context: Context) =
+            ComponentName(context, PrayerWidgetProvider::class.java)
+
+        /** Repaints every placed widget from the cache and re-arms the boundary alarms. */
+        fun reschedule(context: Context) {
+            val next = PrayerRepository.snapshot(context)?.next ?: return
+            AlarmHelper.schedule(context, next.timeMillis)
+        }
+
+        /** Heals the cache: the process is alive and network-allowed while the widget
+         *  broadcasts run, so the refresh happens right here instead of waiting for a job. */
+        fun refreshIfNeeded(context: Context) {
+            if (!PrayerRepository.needsRefresh(context)) return
+            Io.io {
+                PrayerRepository.refresh(context)
+                Io.main { refreshNow(context) }
+            }
+            // Passive fallback tied to the scheduler, in case this pass failed.
+            if (PrayerRepository.needsRefresh(context)) RefreshJob.scheduleNow(context)
+        }
+
+        /** Repaints now, and again if the cache turned out to be stale. */
         fun refreshNow(context: Context) {
             WidgetRenderer.push(context)
             Io.io {
@@ -214,8 +197,9 @@ object AlarmHelper {
         manager.cancel(pending(context, requestCode))
     }
 
+    /** Immutable, and aimed at the unexported [FlipReceiver]: only this app can fire these. */
     private fun pending(context: Context, requestCode: Int): PendingIntent {
-        val receiver = Intent(context, PrayerWidgetProvider::class.java).setAction(ACTION_FLIP)
+        val receiver = Intent(context, FlipReceiver::class.java).setAction(ACTION_FLIP)
         return PendingIntent.getBroadcast(
             context,
             requestCode,

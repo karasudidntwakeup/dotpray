@@ -6,25 +6,37 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
-    <application android:label="@string/widget_label">
+    <!-- Widget only: no activity, no icon, no data entry. Nothing worth backing
+         up, and nothing that should leave the device, so backup stays off. -->
+    <application
+        android:label="@string/widget_label"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="false">
 
         <service
             android:name=".util.RefreshWorker"
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <!-- Exported because the system delivers APPWIDGET_UPDATE here; it does
+             only what that callback can ask for. -->
         <receiver
             android:name=".widget.PrayerWidgetProvider"
             android:exported="true"
             android:label="@string/widget_label">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="dev.karasu.ndotprayer.PRAYER_FIRED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
                 android:resource="@xml/prayer_widget_info" />
         </receiver>
+
+        <!-- The app's own boundary alarms land here. Not exported: nothing
+             outside the app has any business firing them. -->
+        <receiver
+            android:name=".widget.FlipReceiver"
+            android:exported="false" />
 
     </application>
 

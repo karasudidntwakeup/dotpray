@@ -29,6 +29,41 @@ extra rows instead of clipping them.
 
 Widget only: no activity, no launcher icon, no settings screen, no notifications.
 
+## Privacy and security
+
+- **What leaves the device:** the location lookup (`ipwho.is`) and the timings
+  request (`api.aladhan.com`) — coordinates and the date, nothing else. No
+  analytics, no crash reporting, no accounts.
+- **What is stored:** the fetched timings, the hijri date, and the last known
+  coordinates, in the app's private `SharedPreferences`. The app sets
+  `allowBackup="false"`, so they are never copied off the device by backup.
+- **No runtime permissions.** Network, boot and exact-alarm access are all
+  install-time, so the app never asks you for anything.
+- **Exported surface:** only the widget provider is exported, because the
+  system delivers `APPWIDGET_UPDATE` to it — and it acts only on widget ids it
+  actually owns. The boundary alarms go to a separate, unexported receiver, so
+  no other app can fire them. The refresh service is unexported and bound by
+  `BIND_JOB_SERVICE`.
+- **Transport:** HTTPS only (`usesCleartextTraffic="false"`), with immutable
+  `PendingIntent`s.
+- The widget is home-screen only (`widgetCategory="home_screen"`), so it is
+  never drawn on the lock screen.
+
+## Releasing
+
+Release builds are signed from `keystore.properties`, which is gitignored:
+
+```properties
+storeFile=/absolute/path/to/dotpray-release.p12
+storePassword=…
+keyAlias=dotpray
+keyPassword=…
+```
+
+Keep the keystore and its password safe: lose them and you can no longer ship
+updates that install over an existing release build. Without the file,
+`assembleRelease` still works and produces an unsigned APK.
+
 ## Build
 
 ```sh
