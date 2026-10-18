@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Big size: countdown, the next prayer, segmented bar, all five times. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg_solid">
+
+    <!-- Rendered with the launcher's corner radius; covers the preview background. -->
+    <ImageView
+        android:id="@+id/panel_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="fitXY" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="14dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <ImageView
+                android:id="@+id/dot"
+                android:layout_width="6dp"
+                android:layout_height="6dp"
+                android:background="@drawable/dot_red" />
+
+            <TextView
+                android:id="@+id/label_next"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.18"
+                android:text="NEXT PRAYER"
+                android:textColor="@color/nt_grey_label"
+                android:textSize="10sp" />
+
+            <TextView
+                android:id="@+id/label_meta"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="monospace"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.06"
+                android:text="SAT 18 OCT"
+                android:textColor="@color/nt_grey_meta"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <Chronometer
+            android:id="@+id/text_countdown"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fontFamily="@font/ndot57"
+            android:gravity="center_vertical"
+            android:includeFontPadding="false"
+            android:text="--:--"
+            android:textColor="@color/nt_white"
+            android:textSize="34sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/text_prayer"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:fontFamily="@font/ndot55"
+                android:includeFontPadding="false"
+                android:text="MAGHRIB"
+                android:textColor="@color/nt_white"
+                android:textSize="18sp" />
+
+            <TextView
+                android:id="@+id/text_time"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/ndot57"
+                android:includeFontPadding="false"
+                android:text="00:00"
+                android:textColor="@color/nt_white"
+                android:textSize="18sp" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/bar_label"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:fontFamily="sans-serif-medium"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.16"
+            android:text="ASR"
+            android:textColor="@color/nt_grey_past"
+            android:textSize="8sp" />
+
+        <ImageView
+            android:id="@+id/bar"
+            android:layout_width="match_parent"
+            android:layout_height="4dp"
+            android:layout_marginTop="4dp"
+            android:scaleType="fitXY" />
+
+        <ImageView
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="6dp"
+            android:background="@color/nt_hairline" />
+
+        <!-- Five columns, one per prayer. -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:orientation="horizontal">
+
+            <LinearLayout style="@style/PrayerColumn">
+                <TextView
+                    android:id="@+id/row_name_0"
+                    style="@style/PrayerRowName"
+                    android:text="FAJR" />
+
+                <TextView
+                    android:id="@+id/row_time_0"
+                    style="@style/PrayerRowTime"
+                    android:text="00:00" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/PrayerColumn">
+                <TextView
+                    android:id="@+id/row_name_1"
+                    style="@style/PrayerRowName"
+                    android:text="DHUHR" />
+
+                <TextView
+                    android:id="@+id/row_time_1"
+                    style="@style/PrayerRowTime"
+                    android:text="00:00" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/PrayerColumn">
+                <TextView
+                    android:id="@+id/row_name_2"
+                    style="@style/PrayerRowName"
+                    android:text="ASR" />
+
+                <TextView
+                    android:id="@+id/row_time_2"
+                    style="@style/PrayerRowTime"
+                    android:text="00:00" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/PrayerColumn">
+                <TextView
+                    android:id="@+id/row_name_3"
+                    style="@style/PrayerRowName"
+                    android:text="MAGHRIB" />
+
+                <TextView
+                    android:id="@+id/row_time_3"
+                    style="@style/PrayerRowTime"
+                    android:text="00:00" />
+            </LinearLayout>
+
+            <LinearLayout style="@style/PrayerColumn">
+                <TextView
+                    android:id="@+id/row_name_4"
+                    style="@style/PrayerRowName"
+                    android:text="ISHA" />
+
+                <TextView
+                    android:id="@+id/row_time_4"
+                    style="@style/PrayerRowTime"
+                    android:text="00:00" />
+            </LinearLayout>
+        </LinearLayout>
+
+    </LinearLayout>
+
+</FrameLayout>

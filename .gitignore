@@ -1,0 +1,19 @@
+# Build outputs
+build/
+.gradle/
+.kotlin/
+
+# Machine-local configuration
+local.properties
+
+# IDE
+.idea/
+*.iml
+*.hprof
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Screenshots and dumps
+captures/
