@@ -32,11 +32,17 @@
                 android:resource="@xml/prayer_widget_info" />
         </receiver>
 
-        <!-- The app's own boundary alarms land here. Not exported: nothing
-             outside the app has any business firing them. -->
+        <!-- The app's own boundary alarms land here, plus the system's boot /
+             package-replaced wakeups so the alarms are re-armed after both.
+             Not exported: nothing outside the app has any business firing them. -->
         <receiver
             android:name=".widget.FlipReceiver"
-            android:exported="false" />
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 

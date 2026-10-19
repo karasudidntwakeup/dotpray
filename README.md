@@ -21,11 +21,14 @@ extra rows instead of clipping them.
 - The countdown is a host-side `Chronometer`, so there are no per-minute wakeups.
   Alarms only mark the boundaries: the flip at each prayer (exact,
   allow-while-idle, with a short safety re-render behind it) and the two
-  countdown format switches.
+  countdown format switches. A 30-minute repaint bounds a system light/dark
+  switch — and re-arms the alarms.
 - The rounded panel and the segmented bar are painted to bitmaps: widgets cannot
   inflate custom views, so both travel to the launcher as pixels.
-- The panel grey (`#151515`) and the corner radii match Nothing's own widgets;
-  Nothing Red (`#FF3030`) is used exactly once per view.
+- Light and dark palettes follow the system: a white panel (`#FFFFFF`) with
+  near-black ink in light mode, the Nothing grey panel (`#151515`) with white ink
+  in dark. The corner radii match Nothing's own widgets, and Nothing Red
+  (`#FF3030`) is used exactly once per view.
 
 Widget only: no activity, no launcher icon, no settings screen, no notifications.
 

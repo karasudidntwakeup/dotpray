@@ -10,7 +10,8 @@ import dev.karasu.ndotprayer.data.PrayerRepository
 
 /**
  * The app's own boundary wakeups: the flip at each prayer and the two
- * countdown-format switches.
+ * countdown-format switches. Also re-arms them after a reboot or an app update,
+ * since the platform drops pending alarms on both.
  *
  * Deliberately unexported, and deliberately separate from
  * [PrayerWidgetProvider] — that receiver has to stay exported for the system's
@@ -20,7 +21,12 @@ import dev.karasu.ndotprayer.data.PrayerRepository
 class FlipReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        if (intent.action != AlarmHelper.ACTION_FLIP) return
+        when (intent.action) {
+            AlarmHelper.ACTION_FLIP,
+            Intent.ACTION_BOOT_COMPLETED,
+            Intent.ACTION_MY_PACKAGE_REPLACED -> Unit
+            else -> return
+        }
 
         val manager = AppWidgetManager.getInstance(context)
         val ids = manager.getAppWidgetIds(

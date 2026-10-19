@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
+import dev.karasu.ndotprayer.R
 
 /**
  * The segmented progress bar, painted to a bitmap.
@@ -11,18 +12,14 @@ import android.graphics.Paint
  * RemoteViews may not inflate custom views, so the bar travels to the widget
  * host as pixels instead: [WidgetRenderer] hands it to an ImageView.
  *
- * Filled blocks are white, the leading filled block is Nothing Red, the
- * unfilled track stays in the panel's near-black grey.
+ * Filled blocks use the theme's primary ink, the leading filled block is
+ * Nothing Red, the unfilled track stays a shade off the panel.
  */
 object SegmentBar {
 
     private const val SEGMENTS = 28
     private const val HEIGHT_DP = 4f
     private const val GAP_DP = 1f
-
-    private const val RED = 0xFFFF3030.toInt()
-    private const val WHITE = 0xFFFFFFFF.toInt()
-    private const val TRACK = 0xFF262626.toInt()
 
     /** Width the host will receive; scales to the cell without distortion notice. */
     private const val DEFAULT_WIDTH_DP = 250f
@@ -37,14 +34,18 @@ object SegmentBar {
         val canvas = Canvas(bitmap)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
 
+        val ink = context.getColor(R.color.nt_white)
+        val red = context.getColor(R.color.nt_red)
+        val track = context.getColor(R.color.nt_bar_track)
+
         val segmentWidth = (widthPx - (SEGMENTS - 1) * gapPx).toFloat() / SEGMENTS
         val filled = ((percent.coerceIn(0, 100) / 100f) * SEGMENTS).toInt()
 
         repeat(SEGMENTS) { index ->
             paint.color = when {
-                index < filled - 1 -> WHITE
-                index == filled - 1 -> RED
-                else -> TRACK
+                index < filled - 1 -> ink
+                index == filled - 1 -> red
+                else -> track
             }
             val startX = index * (segmentWidth + gapPx)
             canvas.drawRect(startX, 0f, startX + segmentWidth, heightPx.toFloat(), paint)

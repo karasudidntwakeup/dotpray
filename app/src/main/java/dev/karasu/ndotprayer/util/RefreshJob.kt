@@ -9,6 +9,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import dev.karasu.ndotprayer.data.PrayerRepository
+import dev.karasu.ndotprayer.widget.PrayerWidgetProvider
 import dev.karasu.ndotprayer.widget.WidgetRenderer
 
 /**
@@ -70,6 +71,7 @@ class RefreshWorker : JobService() {
             } finally {
                 mainHandler.post {
                     WidgetRenderer.push(context)
+                    PrayerWidgetProvider.reschedule(context)
                     try {
                         jobFinished(params, PrayerRepository.needsRefresh(context))
                     } catch (_: Exception) {

@@ -56,6 +56,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
             appWidgetId,
             WidgetRenderer.render(context, appWidgetId, PrayerRepository.snapshot(context), prefs),
         )
+        reschedule(context)
     }
 
     override fun onEnabled(context: Context) {
@@ -95,10 +96,14 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         /** Repaints now, and again if the cache turned out to be stale. */
         fun refreshNow(context: Context) {
             WidgetRenderer.push(context)
+            reschedule(context)
             Io.io {
                 if (PrayerRepository.needsRefresh(context)) {
                     PrayerRepository.refresh(context)
-                    Io.main { WidgetRenderer.push(context) }
+                    Io.main {
+                        WidgetRenderer.push(context)
+                        reschedule(context)
+                    }
                 }
             }
         }

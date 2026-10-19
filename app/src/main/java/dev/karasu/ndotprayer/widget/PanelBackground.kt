@@ -8,8 +8,9 @@ import android.graphics.RectF
 import dev.karasu.ndotprayer.R
 
 /**
- * The black panel, painted to a bitmap so the corner radius matches the
- * enclosing launcher exactly.
+ * The panel, painted to a bitmap so the corner radius matches the enclosing
+ * launcher exactly. Colours come from the theme resources, so light mode gets
+ * the light panel and dark mode the near-black one.
  *
  * The Nothing launcher rounds widget corners itself via
  * `widget_radius_for_other_in_columns_4` (20dp, multi-cell) and

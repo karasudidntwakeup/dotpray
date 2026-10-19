@@ -17,17 +17,12 @@ import dev.karasu.ndotprayer.data.Snapshot
 /**
  * Turns a [Snapshot] into Nothing-styled [RemoteViews]:
  *
- *  - Nothing-grey panel with a single hairline border and launcher corners,
+ *  - Nothing panel (light or dark, following the system) with a single hairline
+ *    border and launcher corners,
  *  - NDot for the countdown and clock, grey letterspaced caps for labels,
  *  - Nothing Red used exactly once per view (the leading bar block / the active prayer).
  */
 object WidgetRenderer {
-
-    // Nothing palette
-    private const val RED = 0xFFFF3030.toInt()
-    private const val GREY_LABEL = 0xFF8A8A8A.toInt()
-    private const val GREY_PAST = 0xFF4A4A4A.toInt()
-    private const val GREY_FUTURE = 0xFF7A7A7A.toInt()
 
     /** Below these sizes the five prayer rows don't fit — show the compact head. */
     private const val FULL_MIN_WIDTH_DP = 230
@@ -73,7 +68,7 @@ object WidgetRenderer {
 
         views.setTextViewText(R.id.text_prayer, next.kind.label)
         views.setTextViewText(R.id.text_time, Format.clock(next.timeMillis))
-        views.setTextColor(R.id.text_countdown, android.graphics.Color.WHITE)
+        views.setTextColor(R.id.text_countdown, context.getColor(R.color.nt_white))
 
         val hijri = snapshot.hijri.ifBlank { Format.dayStamp(java.time.LocalDate.now()) }
 
@@ -85,7 +80,7 @@ object WidgetRenderer {
 
             val showTimes = heightDp >= COMPACT_TIMES_MIN_HEIGHT_DP
             views.setViewVisibility(R.id.times_row, if (showTimes) View.VISIBLE else View.GONE)
-            if (showTimes) bindTimes(views, snapshot, next)
+            if (showTimes) bindTimes(context, views, snapshot, next)
 
             views.setTextViewTextSize(
                 R.id.text_countdown,
@@ -108,12 +103,13 @@ object WidgetRenderer {
                 views.setTextColor(
                     nameId,
                     when {
-                        prayer.kind == next.kind -> RED
-                        prayer.timeMillis <= System.currentTimeMillis() -> GREY_PAST
-                        else -> GREY_LABEL
+                        prayer.kind == next.kind -> context.getColor(R.color.nt_red)
+                        prayer.timeMillis <= System.currentTimeMillis() ->
+                            context.getColor(R.color.nt_grey_past)
+                        else -> context.getColor(R.color.nt_grey_label)
                     },
                 )
-                views.setTextColor(timeId, timeColor(prayer, next))
+                views.setTextColor(timeId, timeColor(context, prayer, next))
             }
         }
 
@@ -122,18 +118,18 @@ object WidgetRenderer {
         return views
     }
 
-    /** Next prayer is white, past is dim, upcoming is grey. */
-    private fun timeColor(prayer: Prayer, next: Prayer): Int = when {
-        prayer.kind == next.kind -> android.graphics.Color.WHITE
-        prayer.timeMillis <= System.currentTimeMillis() -> GREY_PAST
-        else -> GREY_FUTURE
+    /** Next prayer is the primary ink, past is dim, upcoming is grey. */
+    private fun timeColor(context: Context, prayer: Prayer, next: Prayer): Int = when {
+        prayer.kind == next.kind -> context.getColor(R.color.nt_white)
+        prayer.timeMillis <= System.currentTimeMillis() -> context.getColor(R.color.nt_grey_past)
+        else -> context.getColor(R.color.nt_grey_future)
     }
 
-    private fun bindTimes(views: RemoteViews, snapshot: Snapshot, next: Prayer) {
+    private fun bindTimes(context: Context, views: RemoteViews, snapshot: Snapshot, next: Prayer) {
         snapshot.today.forEachIndexed { index, prayer ->
             val timeId = rowTimeIds.getOrNull(index) ?: return@forEachIndexed
             views.setTextViewText(timeId, Format.clock(prayer.timeMillis))
-            views.setTextColor(timeId, timeColor(prayer, next))
+            views.setTextColor(timeId, timeColor(context, prayer, next))
         }
     }
 
@@ -174,7 +170,7 @@ object WidgetRenderer {
         views.setTextViewText(R.id.text_prayer, "SYNCING")
         views.setTextViewText(R.id.text_time, "--:--")
         views.setImageViewBitmap(R.id.bar, SegmentBar.bitmap(context, 0))
-        views.setTextColor(R.id.text_countdown, GREY_LABEL)
+        views.setTextColor(R.id.text_countdown, context.getColor(R.color.nt_grey_label))
 
         if (compact) {
             views.setViewVisibility(

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Pure black card with a single hairline border. No rounding: Nothing keeps panels square. -->
+<!-- Panel card with a single hairline border; colours follow the system theme.
+     No rounding: the launcher rounds the bitmap-rendered panel. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
     <solid android:color="@color/nt_panel" />
