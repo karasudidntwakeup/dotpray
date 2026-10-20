@@ -1,17 +1,19 @@
 # dotpray
 
 A home-screen widget for Nothing phones: the next prayer and a live countdown,
-drawn in Nothing's dot-matrix type and monochrome palette rather than the usual
+drawn in Nothing's dot face with the monochrome palette rather than the usual
 generic Android widget.
 
 ## What it shows
 
 **Full (4×2)** — the next prayer, a live countdown, a segmented progress bar for
-the current prayer window, the hijri date, and all five times of the day.
+the current prayer window, and all five times in a table below the bar. Every
+label and number uses the dot face; the next time is the only red time.
 
-**Compact (2×2 and smaller)** — the countdown, the next prayer with its time, all
-five times on one line, and the hijri date. Cells too short for that drop the
-extra rows instead of clipping them.
+**Compact (2×2 and smaller)** — the countdown, the next prayer, and the bar.
+When the cell is tall enough, all five times appear under the bar with the next
+one in red; short cells drop that strip instead of clipping it. There is no
+date clutter, and no time is repeated.
 
 ## How it works
 
@@ -21,14 +23,16 @@ extra rows instead of clipping them.
 - The countdown is a host-side `Chronometer`, so there are no per-minute wakeups.
   Alarms only mark the boundaries: the flip at each prayer (exact,
   allow-while-idle, with a short safety re-render behind it) and the two
-  countdown format switches. A 30-minute repaint bounds a system light/dark
-  switch — and re-arms the alarms.
+  countdown format switches. A content-triggered job watches the system night
+  setting and repaints as soon as the light/dark toggle changes; automatic
+  sunset switches and anything the job misses are bounded by the 30-minute
+  update, which also re-arms the alarms.
 - The rounded panel and the segmented bar are painted to bitmaps: widgets cannot
   inflate custom views, so both travel to the launcher as pixels.
 - Light and dark palettes follow the system: a white panel (`#FFFFFF`) with
   near-black ink in light mode, the Nothing grey panel (`#151515`) with white ink
   in dark. The corner radii match Nothing's own widgets, and Nothing Red
-  (`#FF3030`) is used exactly once per view.
+  (`#FF3030`) marks the next prayer's time and the leading segment of the bar.
 
 Widget only: no activity, no launcher icon, no settings screen, no notifications.
 
@@ -37,9 +41,9 @@ Widget only: no activity, no launcher icon, no settings screen, no notifications
 - **What leaves the device:** the location lookup (`ipwho.is`) and the timings
   request (`api.aladhan.com`) — coordinates and the date, nothing else. No
   analytics, no crash reporting, no accounts.
-- **What is stored:** the fetched timings, the hijri date, and the last known
-  coordinates, in the app's private `SharedPreferences`. The app sets
-  `allowBackup="false"`, so they are never copied off the device by backup.
+- **What is stored:** the fetched timings and the last known coordinates, in the
+  app's private `SharedPreferences`. The app sets `allowBackup="false"`, so they
+  are never copied off the device by backup.
 - **No runtime permissions.** Network, boot and exact-alarm access are all
   install-time, so the app never asks you for anything.
 - **Exported surface:** only the widget provider is exported, because the
@@ -97,7 +101,6 @@ dotpray.
 
 ### Fonts
 
-`ndot55.otf` and `ndot57.otf` are the NDot faces that give the widget its
-Nothing look. They are third-party typefaces bundled here for convenience; the
-rights remain with their author, so replace or remove them if you redistribute
-this under different terms.
+Every label and number uses Nothing's `NDot55All` system dot family, so the
+widget matches the phone's own dot typography. No fonts are bundled; on a
+non-Nothing device the family falls back to the system sans-serif.

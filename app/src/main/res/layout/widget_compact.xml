@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Compact head: countdown, the next prayer, the bar. For small cells. -->
+<!-- Compact: Nothing-style status line, big countdown, bar, five times. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/root"
     android:layout_width="match_parent"
@@ -17,31 +17,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
-        android:padding="12dp">
-
-        <TextView
-            android:id="@+id/label_meta"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:fontFamily="monospace"
-            android:gravity="end"
-            android:includeFontPadding="false"
-            android:letterSpacing="0.06"
-            android:text="--"
-            android:textColor="@color/nt_grey_meta"
-            android:textSize="9sp" />
-
-        <Chronometer
-            android:id="@+id/text_countdown"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            android:layout_weight="1"
-            android:fontFamily="@font/ndot57"
-            android:gravity="center_vertical"
-            android:includeFontPadding="false"
-            android:text="--:--"
-            android:textColor="@color/nt_white"
-            android:textSize="24sp" />
+        android:paddingHorizontal="14dp"
+        android:paddingVertical="12dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -49,41 +26,75 @@
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
+            <ImageView
+                android:id="@+id/dot"
+                android:layout_width="5dp"
+                android:layout_height="5dp"
+                android:background="@drawable/dot_red" />
+
             <TextView
-                android:id="@+id/text_prayer"
+                android:id="@+id/label_next"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="6dp"
                 android:layout_weight="1"
-                android:fontFamily="@font/ndot55"
+                android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
+                android:letterSpacing="0.22"
+                android:text="NEXT"
+                android:textColor="@color/nt_grey_label"
+                android:textSize="9sp" />
+
+            <TextView
+                android:id="@+id/text_prayer"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="NDot55All"
+                android:includeFontPadding="false"
+                android:letterSpacing="0.04"
                 android:text="MAGHRIB"
                 android:textColor="@color/nt_white"
-                android:textSize="17sp" />
+                android:textSize="12sp" />
 
+            <!-- Night fallback only: tomorrow's Fajr is not in today's strip. -->
             <TextView
                 android:id="@+id/text_time"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:fontFamily="@font/ndot57"
+                android:layout_marginStart="8dp"
+                android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
                 android:text="00:00"
-                android:textColor="@color/nt_white"
-                android:textSize="17sp" />
+                android:textColor="@color/nt_red"
+                android:textSize="12sp" />
         </LinearLayout>
+
+        <!-- The countdown takes the free height and sits in the optical centre. -->
+        <Chronometer
+            android:id="@+id/text_countdown"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:fontFamily="NDot55All"
+            android:gravity="start|center_vertical"
+            android:includeFontPadding="false"
+            android:text="--:--"
+            android:textColor="@color/nt_white"
+            android:textSize="42sp" />
 
         <ImageView
             android:id="@+id/bar"
             android:layout_width="match_parent"
             android:layout_height="4dp"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="12dp"
             android:scaleType="fitXY" />
 
-        <!-- All five times, when the cell is tall enough to hold them. -->
+        <!-- All five times under the bar, including the next one in red. -->
         <LinearLayout
             android:id="@+id/times_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <TextView

@@ -24,16 +24,12 @@ data class Prayer(
     val timeMillis: Long,
 )
 
-/** One cached calendar day of timings plus its Hijri label. */
+/** One cached calendar day of timings. */
 data class DayTimings(
     val date: LocalDate,
     val prayers: List<Prayer>,
-    val hijri: String,
     val fetchedAtMillis: Long,
 ) {
-    val isStale: Boolean
-        get() = System.currentTimeMillis() - fetchedAtMillis > STALE_AFTER_MILLIS
-
     companion object {
         const val STALE_AFTER_MILLIS = 12L * 60 * 60 * 1000
     }
@@ -50,7 +46,6 @@ data class Snapshot(
     val next: Prayer,
     val progress: Float,
     val today: List<Prayer>,
-    val hijri: String,
 )
 
 /** Pure formatting helpers shared by the widget and the renderer. */
@@ -60,10 +55,4 @@ object Format {
         DateTimeFormatter.ofPattern("HH:mm", Locale.US).format(
             java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()),
         )
-
-    /** "SAT 18 OCT" — the Nothing-style metadata line. */
-    fun dayStamp(date: LocalDate): String =
-        DateTimeFormatter.ofPattern("EEE dd MMM", Locale.US)
-            .format(date)
-            .uppercase(Locale.US)
 }

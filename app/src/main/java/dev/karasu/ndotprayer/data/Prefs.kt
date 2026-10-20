@@ -23,7 +23,6 @@ object Prefs {
     private const val KEY_SIGNATURE = "cache_signature"
     private const val CACHE_DAY_PREFIX = "day_"
     private const val CACHE_META_PREFIX = "day_meta_"
-    private const val CACHE_HIJRI_PREFIX = "day_hijri_"
 
     fun get(context: Context): Store = Store(context.applicationContext)
 
@@ -54,7 +53,6 @@ object Prefs {
             for (key in prefs.all.keys) {
                 if (key.startsWith(CACHE_DAY_PREFIX) ||
                     key.startsWith(CACHE_META_PREFIX) ||
-                    key.startsWith(CACHE_HIJRI_PREFIX) ||
                     key == KEY_SIGNATURE
                 ) {
                     editor.remove(key)
@@ -68,7 +66,6 @@ object Prefs {
             prefs.edit()
                 .putString(CACHE_DAY_PREFIX + day.date, payload)
                 .putLong(CACHE_META_PREFIX + day.date, day.fetchedAtMillis)
-                .putString(CACHE_HIJRI_PREFIX + day.date, day.hijri)
                 .apply()
         }
 
@@ -86,7 +83,6 @@ object Prefs {
             return DayTimings(
                 date = date,
                 prayers = prayers,
-                hijri = prefs.getString(CACHE_HIJRI_PREFIX + date, null).orEmpty(),
                 fetchedAtMillis = prefs.getLong(CACHE_META_PREFIX + date, 0L),
             )
         }

@@ -2,7 +2,6 @@ package dev.karasu.ndotprayer.data
 
 import org.json.JSONObject
 import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
@@ -14,7 +13,6 @@ import java.util.Locale
 /** Raw, already-parsed timings for one date as returned by Aladhan. */
 data class RawTimings(
     val times: Map<PrayerKind, LocalTime>,
-    val hijri: String,
 )
 
 /**
@@ -29,12 +27,6 @@ object AladhanApi {
 
     private const val BASE = "https://api.aladhan.com/v1/timings/"
     private const val DATE_FORMAT = "dd-MM-yyyy"
-
-    private val HIJRI_MONTHS = listOf(
-        "MUHARRAM", "SAFAR", "RABI'I", "RABI'II",
-        "JUMADA I", "JUMADA II", "RAJAB", "SHA'BAN",
-        "RAMADHAN", "SHAWAL", "DHU QI'DAH", "DHU HIJJA",
-    )
 
     fun timings(
         date: LocalDate,
@@ -55,7 +47,7 @@ object AladhanApi {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 15_000
-            setRequestProperty("User-Agent", "ndot-prayer/1.0 (Android)")
+            setRequestProperty("User-Agent", "dotpray/1.4 (Android)")
         }
 
         try {
@@ -92,25 +84,7 @@ object AladhanApi {
         if (times.size != PrayerKind.ORDERED.size) {
             throw ApiException("incomplete timings in response")
         }
-        return RawTimings(times = times, hijri = parseHijri(data))
-    }
-
-    private fun parseHijri(data: JSONObject): String {
-        return runCatching {
-            val dateContainers = listOf(
-                runCatching { data.getJSONObject("date") },
-                runCatching { data.getJSONObject("meta").getJSONObject("date") },
-            )
-            val hijri = dateContainers.asSequence()
-                .mapNotNull { it.getOrNull() }
-                .firstNotNullOfOrNull { runCatching { it.getJSONObject("hijri") }.getOrNull() }
-                ?: return@runCatching ""
-            val day = hijri.optString("day").removePrefix("0").trim()
-            val monthNumber = hijri.getJSONObject("month").optInt("number", 0)
-            val year = hijri.optString("year").trim()
-            val monthName = HIJRI_MONTHS.getOrNull(monthNumber - 1) ?: "—"
-            "$day $monthName $year"
-        }.getOrDefault("")
+        return RawTimings(times = times)
     }
 
     class ApiException(message: String) : java.io.IOException(message)
@@ -125,7 +99,7 @@ object AladhanApi {
                 requestMethod = "GET"
                 connectTimeout = 8_000
                 readTimeout = 8_000
-                setRequestProperty("User-Agent", "ndot-prayer/1.0 (Android)")
+                setRequestProperty("User-Agent", "dotpray/1.4 (Android)")
             }
             try {
                 if (connection.responseCode !in 200..299) return null

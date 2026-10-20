@@ -8,15 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
-import dev.karasu.ndotprayer.data.Prefs
 import dev.karasu.ndotprayer.data.PrayerRepository
 import dev.karasu.ndotprayer.util.Io
 import dev.karasu.ndotprayer.util.RefreshJob
+import dev.karasu.ndotprayer.util.ThemeJob
 
 /**
- * The provider the launcher and the system talk to: black panel, NDot countdown
- * (a live Chronometer), the next prayer, a segmented bar, and all five times of
- * the day. One layout family, resizable.
+ * The provider the launcher and the system talk to: Nothing panel, NDot
+ * dot-face countdown (a live Chronometer), the next prayer, a segmented bar,
+ * and all five times of the day. One layout family, resizable.
  *
  * It has to be exported for APPWIDGET_UPDATE to arrive, so it does only what
  * that callback can legitimately ask for. The app's own boundary alarms go to
@@ -34,11 +34,11 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         // from the launcher cannot point us at widgets we do not own.
         val ids = appWidgetManager.getAppWidgetIds(component(context))
         val snapshot = PrayerRepository.snapshot(context)
-        val prefs = Prefs.get(context)
         ids.forEach { id ->
-            appWidgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot, prefs))
+            appWidgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
         }
         reschedule(context)
+        ThemeJob.schedule(context)
         refreshIfNeeded(context)
     }
 
@@ -51,10 +51,9 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         // Also delivered through the exported receiver: only repaint ids that
         // actually belong to this provider.
         if (appWidgetId !in appWidgetManager.getAppWidgetIds(component(context))) return
-        val prefs = Prefs.get(context)
         appWidgetManager.updateAppWidget(
             appWidgetId,
-            WidgetRenderer.render(context, appWidgetId, PrayerRepository.snapshot(context), prefs),
+            WidgetRenderer.render(context, appWidgetId, PrayerRepository.snapshot(context)),
         )
         reschedule(context)
     }
@@ -62,12 +61,14 @@ class PrayerWidgetProvider : AppWidgetProvider() {
     override fun onEnabled(context: Context) {
         RefreshJob.scheduleNow(context)
         RefreshJob.schedulePeriodic(context)
+        ThemeJob.schedule(context)
         reschedule(context)
     }
 
     override fun onDisabled(context: Context) {
         // Last widget removed — nothing left to update.
         AlarmHelper.cancel(context)
+        ThemeJob.cancel(context)
     }
 
     companion object {

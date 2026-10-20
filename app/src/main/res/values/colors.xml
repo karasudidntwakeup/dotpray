@@ -4,10 +4,9 @@
     <color name="nt_panel">#FFFFFFFF</color>
     <color name="nt_white">#FF151515</color>
     <color name="nt_red">#FFFF3030</color>
-    <color name="nt_grey_label">#FF6F6F6F</color>
-    <color name="nt_grey_meta">#FF8A8A8A</color>
-    <color name="nt_grey_future">#FF7A7A7A</color>
-    <color name="nt_grey_past">#FFBDBDBD</color>
+    <color name="nt_grey_label">#FF5F5F5F</color>
+    <color name="nt_grey_future">#FF666666</color>
+    <color name="nt_grey_past">#FFB0B0B0</color>
     <color name="nt_hairline">#FFDCDCDC</color>
     <color name="nt_bar_track">#FFE3E3E3</color>
 </resources>

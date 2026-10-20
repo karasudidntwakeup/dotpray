@@ -3,14 +3,12 @@ package dev.karasu.ndotprayer.widget
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
-import android.content.Intent
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import dev.karasu.ndotprayer.R
 import dev.karasu.ndotprayer.data.Format
 import dev.karasu.ndotprayer.data.Prayer
-import dev.karasu.ndotprayer.data.Prefs
 import dev.karasu.ndotprayer.data.PrayerRepository
 import dev.karasu.ndotprayer.data.Snapshot
 
@@ -19,14 +17,16 @@ import dev.karasu.ndotprayer.data.Snapshot
  *
  *  - Nothing panel (light or dark, following the system) with a single hairline
  *    border and launcher corners,
- *  - NDot for the countdown and clock, grey letterspaced caps for labels,
- *  - Nothing Red used exactly once per view (the leading bar block / the active prayer).
+ *  - Nothing's NDot55All dot face for every label and number, with letterspaced
+ *    caps for labels,
+ *  - Nothing Red on the next prayer time and the leading bar block; the next
+ *    time appears once, in the strip under the bar.
  */
 object WidgetRenderer {
 
-    /** Below these sizes the five prayer rows don't fit — show the compact head. */
-    private const val FULL_MIN_WIDTH_DP = 230
-    private const val FULL_MIN_HEIGHT_DP = 160
+    /** Below these sizes the four secondary rows don't fit — show the compact head. */
+    private const val FULL_MIN_WIDTH_DP = 240
+    private const val FULL_MIN_HEIGHT_DP = 220
 
     private const val DEFAULT_WIDTH_DP = 250
     private const val DEFAULT_HEIGHT_DP = 160
@@ -34,12 +34,11 @@ object WidgetRenderer {
     private const val MINUTE = 60_000L
     private const val HOUR = 60 * MINUTE
 
-    /** In the compact widget, below these heights the extra rows are dropped. */
-    private const val COMPACT_TIMES_MIN_HEIGHT_DP = 140
-    private const val COMPACT_HIJRI_MIN_HEIGHT_DP = 100
+    /** In the compact widget, below this height the times strip is dropped. */
+    private const val COMPACT_TIMES_MIN_HEIGHT_DP = 155
 
-    /** Windows between prayers, in NDot digits. */
-    fun render(context: Context, appWidgetId: Int, snapshot: Snapshot?, prefs: Prefs.Store): RemoteViews {
+    /** Windows between prayers, in the dot face. */
+    fun render(context: Context, appWidgetId: Int, snapshot: Snapshot?): RemoteViews {
         val (widthDp, heightDp) = sizeOf(context, appWidgetId)
         val compact = widthDp < FULL_MIN_WIDTH_DP || heightDp < FULL_MIN_HEIGHT_DP
         val layout = if (compact) R.layout.widget_compact else R.layout.widget
@@ -55,6 +54,7 @@ object WidgetRenderer {
             return views
         }
 
+        val palette = Palette(context)
         val next = snapshot.next
         val remaining = next.timeMillis - System.currentTimeMillis()
 
@@ -68,49 +68,41 @@ object WidgetRenderer {
 
         views.setTextViewText(R.id.text_prayer, next.kind.label)
         views.setTextViewText(R.id.text_time, Format.clock(next.timeMillis))
-        views.setTextColor(R.id.text_countdown, context.getColor(R.color.nt_white))
 
-        val hijri = snapshot.hijri.ifBlank { Format.dayStamp(java.time.LocalDate.now()) }
+        // The next time lives under the bar, in the schedule. Only when the next
+        // prayer is tomorrow's Fajr (not in today's list) does it stay in the
+        // hero row, so the widget never loses it at night.
+        val nextInToday = snapshot.today.any { it.timeMillis == next.timeMillis }
+        views.setViewVisibility(R.id.text_time, if (nextInToday) View.GONE else View.VISIBLE)
+
+        // Bind every colour, not just the stateful ones: the host inflates the
+        // layout in its own configuration, and the bitmaps above are painted in
+        // ours. Explicit colours keep text and panel on the same side of a
+        // light/dark switch (no white-on-white if the two ever disagree).
+        views.setTextColor(R.id.label_next, palette.label)
+        views.setTextColor(R.id.text_countdown, palette.ink)
+        views.setTextColor(R.id.text_prayer, palette.ink)
+        views.setTextColor(R.id.text_time, palette.red)
 
         if (compact) {
-            // Short cells keep it to a skeleton, taller ones fill with detail.
-            val showHijri = heightDp >= COMPACT_HIJRI_MIN_HEIGHT_DP
-            views.setViewVisibility(R.id.label_meta, if (showHijri) View.VISIBLE else View.GONE)
-            if (showHijri) views.setTextViewText(R.id.label_meta, hijri)
-
+            // Short cells keep it to the hero; taller ones add all five times.
             val showTimes = heightDp >= COMPACT_TIMES_MIN_HEIGHT_DP
             views.setViewVisibility(R.id.times_row, if (showTimes) View.VISIBLE else View.GONE)
-            if (showTimes) bindTimes(context, views, snapshot, next)
+            if (showTimes) bindCompactTimes(views, snapshot, next, palette)
 
             views.setTextViewTextSize(
                 R.id.text_countdown,
                 TypedValue.COMPLEX_UNIT_SP,
-                when {
-                    showTimes -> 24f
-                    showHijri -> 20f
-                    else -> 16f
-                },
+                if (showTimes) 42f else 38f,
             )
         } else {
-            views.setTextViewText(R.id.label_meta, hijri)
-            views.setTextViewText(R.id.bar_label, snapshot.previous?.kind?.label.orEmpty())
-
-            snapshot.today.forEachIndexed { index, prayer ->
-                val nameId = rowNameIds.getOrNull(index) ?: return@forEachIndexed
-                val timeId = rowTimeIds.getOrNull(index) ?: return@forEachIndexed
-                views.setTextViewText(nameId, prayer.kind.label)
-                views.setTextViewText(timeId, Format.clock(prayer.timeMillis))
-                views.setTextColor(
-                    nameId,
-                    when {
-                        prayer.kind == next.kind -> context.getColor(R.color.nt_red)
-                        prayer.timeMillis <= System.currentTimeMillis() ->
-                            context.getColor(R.color.nt_grey_past)
-                        else -> context.getColor(R.color.nt_grey_label)
-                    },
-                )
-                views.setTextColor(timeId, timeColor(context, prayer, next))
-            }
+            val window = snapshot.previous?.kind?.label
+            views.setTextViewText(
+                R.id.bar_label,
+                if (window != null) "$window > ${next.kind.label}" else next.kind.label,
+            )
+            views.setTextColor(R.id.bar_label, palette.label)
+            bindFullSchedule(views, snapshot, next, palette)
         }
 
         views.setImageViewBitmap(R.id.bar, SegmentBar.bitmap(context, (snapshot.progress * 100).toInt()))
@@ -118,19 +110,41 @@ object WidgetRenderer {
         return views
     }
 
-    /** Next prayer is the primary ink, past is dim, upcoming is grey. */
-    private fun timeColor(context: Context, prayer: Prayer, next: Prayer): Int = when {
-        prayer.kind == next.kind -> context.getColor(R.color.nt_white)
-        prayer.timeMillis <= System.currentTimeMillis() -> context.getColor(R.color.nt_grey_past)
-        else -> context.getColor(R.color.nt_grey_future)
+    /** The five times under the bar; the next one is the only red time. */
+    private fun bindCompactTimes(views: RemoteViews, snapshot: Snapshot, next: Prayer, palette: Palette) {
+        val now = System.currentTimeMillis()
+        snapshot.today.take(5).forEachIndexed { index, prayer ->
+            val timeId = rowTimeIds[index]
+            views.setTextViewText(timeId, Format.clock(prayer.timeMillis))
+            views.setTextColor(timeId, timeColor(prayer, next, now, palette))
+        }
     }
 
-    private fun bindTimes(context: Context, views: RemoteViews, snapshot: Snapshot, next: Prayer) {
-        snapshot.today.forEachIndexed { index, prayer ->
-            val timeId = rowTimeIds.getOrNull(index) ?: return@forEachIndexed
+    /** The full table under the bar, with prayer names and the next time in red. */
+    private fun bindFullSchedule(views: RemoteViews, snapshot: Snapshot, next: Prayer, palette: Palette) {
+        val now = System.currentTimeMillis()
+        snapshot.today.take(5).forEachIndexed { index, prayer ->
+            val nameId = rowNameIds[index]
+            val timeId = rowTimeIds[index]
+            views.setTextViewText(nameId, prayer.kind.label)
             views.setTextViewText(timeId, Format.clock(prayer.timeMillis))
-            views.setTextColor(timeId, timeColor(context, prayer, next))
+            views.setTextColor(
+                nameId,
+                when {
+                    prayer.timeMillis == next.timeMillis -> palette.ink
+                    prayer.timeMillis <= now -> palette.past
+                    else -> palette.label
+                },
+            )
+            views.setTextColor(timeId, timeColor(prayer, next, now, palette))
         }
+    }
+
+    /** Red marks the next prayer; past is dim, later is grey. */
+    private fun timeColor(prayer: Prayer, next: Prayer, now: Long, palette: Palette): Int = when {
+        prayer.timeMillis == next.timeMillis -> palette.red
+        prayer.timeMillis <= now -> palette.past
+        else -> palette.future
     }
 
     /**
@@ -166,22 +180,35 @@ object WidgetRenderer {
     }
 
     private fun bindPlaceholder(context: Context, views: RemoteViews, compact: Boolean, heightDp: Int) {
+        val palette = Palette(context)
         views.setChronometer(R.id.text_countdown, 0L, "--:--", false)
         views.setTextViewText(R.id.text_prayer, "SYNCING")
         views.setTextViewText(R.id.text_time, "--:--")
         views.setImageViewBitmap(R.id.bar, SegmentBar.bitmap(context, 0))
-        views.setTextColor(R.id.text_countdown, context.getColor(R.color.nt_grey_label))
+        views.setTextColor(R.id.label_next, palette.label)
+        views.setTextColor(R.id.text_countdown, palette.label)
+        views.setTextColor(R.id.text_prayer, palette.ink)
+        views.setTextColor(R.id.text_time, palette.red)
+        views.setViewVisibility(R.id.text_time, View.GONE)
 
         if (compact) {
-            views.setViewVisibility(
-                R.id.label_meta,
-                if (heightDp >= COMPACT_HIJRI_MIN_HEIGHT_DP) View.VISIBLE else View.GONE,
-            )
             views.setViewVisibility(
                 R.id.times_row,
                 if (heightDp >= COMPACT_TIMES_MIN_HEIGHT_DP) View.VISIBLE else View.GONE,
             )
+        } else {
+            views.setTextViewText(R.id.bar_label, "--")
+            views.setTextColor(R.id.bar_label, palette.label)
         }
+    }
+
+    /** One theme's colours, resolved for the configuration this render runs in. */
+    private class Palette(context: Context) {
+        val ink = context.getColor(R.color.nt_white)
+        val red = context.getColor(R.color.nt_red)
+        val label = context.getColor(R.color.nt_grey_label)
+        val past = context.getColor(R.color.nt_grey_past)
+        val future = context.getColor(R.color.nt_grey_future)
     }
 
     /** Android resource ids are opaque, so the five columns are listed explicitly. */
@@ -209,9 +236,8 @@ object WidgetRenderer {
         )
         if (ids.isEmpty()) return
         val snapshot = PrayerRepository.snapshot(context)
-        val prefs = Prefs.get(context)
         ids.forEach { id ->
-            manager.updateAppWidget(id, render(context, id, snapshot, prefs))
+            manager.updateAppWidget(id, render(context, id, snapshot))
         }
     }
 }

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="widget_label">dotpray</string>
-    <string name="widget_description">Next prayer and countdown, in Nothing dot-matrix.</string>
+    <string name="widget_description">Next prayer, live countdown, and the day\'s times.</string>
 </resources>

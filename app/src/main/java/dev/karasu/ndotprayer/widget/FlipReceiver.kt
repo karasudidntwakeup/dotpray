@@ -5,8 +5,8 @@ import android.content.BroadcastReceiver
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
-import dev.karasu.ndotprayer.data.Prefs
 import dev.karasu.ndotprayer.data.PrayerRepository
+import dev.karasu.ndotprayer.util.ThemeJob
 
 /**
  * The app's own boundary wakeups: the flip at each prayer and the two
@@ -33,11 +33,11 @@ class FlipReceiver : BroadcastReceiver() {
             ComponentName(context, PrayerWidgetProvider::class.java),
         )
         val snapshot = PrayerRepository.snapshot(context)
-        val prefs = Prefs.get(context)
         ids.forEach { id ->
-            manager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot, prefs))
+            manager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
         }
         PrayerWidgetProvider.reschedule(context)
+        ThemeJob.schedule(context, replace = true)
         PrayerWidgetProvider.refreshIfNeeded(context)
     }
 }

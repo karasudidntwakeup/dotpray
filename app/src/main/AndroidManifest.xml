@@ -18,6 +18,13 @@
             android:exported="false"
             android:permission="android.permission.BIND_JOB_SERVICE" />
 
+        <!-- Watches the system night setting so the widget repaints on a theme
+             switch, without polling. Not exported; only JobScheduler binds it. -->
+        <service
+            android:name=".util.ThemeWorker"
+            android:exported="false"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <!-- Exported because the system delivers APPWIDGET_UPDATE here; it does
              only what that callback can ask for. -->
         <receiver

@@ -53,7 +53,6 @@ object PrayerRepository {
             next = next,
             progress = progress,
             today = today.prayers.sortedBy { it.timeMillis },
-            hijri = today.hijri,
         )
     }
 
@@ -117,7 +116,6 @@ object PrayerRepository {
                                 .toEpochMilli(),
                         )
                     },
-                    hijri = raw.hijri,
                     fetchedAtMillis = System.currentTimeMillis(),
                 ),
             )

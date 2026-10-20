@@ -11,31 +11,34 @@
     <style name="PrayerRowName">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:fontFamily">NDot55All</item>
         <item name="android:includeFontPadding">false</item>
-        <item name="android:letterSpacing">0.14</item>
+        <item name="android:letterSpacing">0.1</item>
+        <item name="android:maxLines">1</item>
         <item name="android:textColor">@color/nt_grey_label</item>
-        <item name="android:textSize">8sp</item>
+        <item name="android:textSize">9sp</item>
     </style>
 
     <style name="PrayerRowTime">
         <item name="android:layout_width">match_parent</item>
         <item name="android:layout_height">wrap_content</item>
-        <item name="android:layout_marginTop">3dp</item>
-        <item name="android:fontFamily">@font/ndot57</item>
+        <item name="android:layout_marginTop">4dp</item>
+        <item name="android:fontFamily">NDot55All</item>
         <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
         <item name="android:textColor">@color/nt_grey_future</item>
-        <item name="android:textSize">11sp</item>
+        <item name="android:textSize">12sp</item>
     </style>
 
-    <!-- The five times on a single line, for the compact widget. -->
+    <!-- The five times on one line, for the compact widget. -->
     <style name="CompactTime">
         <item name="android:layout_width">0dp</item>
         <item name="android:layout_height">wrap_content</item>
         <item name="android:layout_weight">1</item>
-        <item name="android:fontFamily">@font/ndot57</item>
+        <item name="android:fontFamily">NDot55All</item>
         <item name="android:gravity">center</item>
         <item name="android:includeFontPadding">false</item>
+        <item name="android:maxLines">1</item>
         <item name="android:textColor">@color/nt_grey_future</item>
         <item name="android:textSize">9sp</item>
     </style>
