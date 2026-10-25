@@ -1,5 +1,6 @@
 package dev.karasu.ndotprayer.widget
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -174,6 +175,7 @@ object AlarmHelper {
     }
 
     /** Hide the prayer-arrival animation after its short run. */
+    @SuppressLint("MissingPermission") // USE_EXACT_ALARM is declared; guarded below.
     fun scheduleAnnouncementEnd(context: Context, delayMillis: Long) {
         val manager = context.getSystemService(android.app.AlarmManager::class.java) ?: return
         val at = System.currentTimeMillis() + delayMillis
@@ -193,6 +195,7 @@ object AlarmHelper {
      * allow-while-idle inexact window as the fallback. Even waking from doze,
      * allow-while-idle alarms are delivered on time.
      */
+    @SuppressLint("MissingPermission") // USE_EXACT_ALARM is declared; guarded below.
     private fun set(
         manager: android.app.AlarmManager,
         context: Context,

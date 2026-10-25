@@ -16,6 +16,16 @@ five-rail bar. When the cell is tall enough, every prayer name and time appears
 under the bar (Fajr included); short cells drop that strip instead of clipping
 it. There is no date clutter, and no time is repeated.
 
+The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the unit
+(`HRS` or `MIN`) is set smaller on the number's baseline.
+
+## Using it
+
+- Tap the widget to refresh the location and timings on demand. While the fetch
+  runs, the status line shows `SYNCING` and the rail stays in place.
+- When a prayer arrives, the walking-dot animation and its name replace the
+  countdown for six seconds; the widget then settles on the next prayer.
+
 ## How it works
 
 - Prayer times come from the [Aladhan API](https://aladhan.com/prayer-times-api)
@@ -35,7 +45,7 @@ it. There is no date clutter, and no time is repeated.
   in dark. The corner radii match Nothing's own widgets, and Nothing Red
   (`#FF3030`) marks the next prayer's time and the leading segment of the bar.
 
-Widget only: no activity, no launcher icon, no settings screen, no notifications.
+Widget only: no activity, no launcher entry, no settings screen, no notifications.
 
 ## Privacy and security
 

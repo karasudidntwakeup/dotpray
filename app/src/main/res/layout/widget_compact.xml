@@ -1,16 +1,19 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Compact: Nothing-style status line, big countdown, bar, five times. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/widget_bg_solid">
+    android:background="@drawable/widget_bg_solid"
+    tools:ignore="SmallSp">
 
     <!-- Rendered with the launcher's corner radius; covers the preview background. -->
     <ImageView
         android:id="@+id/panel_bg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
+        android:importantForAccessibility="no"
         android:scaleType="fitXY" />
 
     <LinearLayout
@@ -32,7 +35,8 @@
                 android:id="@+id/dot"
                 android:layout_width="5dp"
                 android:layout_height="5dp"
-                android:background="@drawable/dot_red" />
+                android:background="@drawable/dot_red"
+                android:importantForAccessibility="no" />
 
             <TextView
                 android:id="@+id/label_next"
@@ -43,7 +47,7 @@
                 android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.22"
-                android:text="NEXT"
+                android:text="@string/label_next"
                 android:textColor="@color/nt_grey_label"
                 android:textSize="9sp" />
 
@@ -54,7 +58,7 @@
                 android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
                 android:letterSpacing="0.04"
-                android:text="MAGHRIB"
+                android:text="@string/prayer_maghrib"
                 android:textColor="@color/nt_white"
                 android:textSize="12sp" />
 
@@ -66,7 +70,7 @@
                 android:layout_marginStart="8dp"
                 android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
-                android:text="00:00"
+                android:text="@string/time_placeholder"
                 android:textColor="@color/nt_red"
                 android:textSize="12sp" />
         </LinearLayout>
@@ -82,12 +86,15 @@
             android:gravity="start|center_vertical"
             android:orientation="horizontal">
 
+            <!-- Nested on purpose: the inner row aligns the unit to the
+                 number's baseline; the outer row centres the pair. -->
             <LinearLayout
                 android:id="@+id/countdown_row"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:baselineAligned="true"
-                android:orientation="horizontal">
+                android:orientation="horizontal"
+                tools:ignore="UselessParent">
 
                 <Chronometer
                     android:id="@+id/text_countdown"
@@ -95,7 +102,7 @@
                     android:layout_height="wrap_content"
                     android:fontFamily="NDot55All"
                     android:includeFontPadding="false"
-                    android:text="--:--"
+                    android:text="@string/countdown_placeholder"
                     android:textColor="@color/nt_white"
                     android:textSize="42sp" />
 
@@ -106,7 +113,7 @@
                     android:layout_marginStart="4dp"
                     android:fontFamily="NDot55All"
                     android:includeFontPadding="false"
-                    android:text="MIN"
+                    android:text="@string/unit_min"
                     android:textColor="@color/nt_white"
                     android:textSize="14sp" />
             </LinearLayout>
@@ -117,6 +124,7 @@
             android:layout_width="match_parent"
             android:layout_height="4dp"
             android:layout_marginTop="8dp"
+            android:importantForAccessibility="no"
             android:scaleType="fitXY" />
 
         <!-- All five prayers under the bar, including Fajr. The next name and
@@ -131,27 +139,27 @@
             <TextView
                 android:id="@+id/row_name_0"
                 style="@style/CompactName"
-                android:text="FAJR" />
+                android:text="@string/prayer_fajr" />
 
             <TextView
                 android:id="@+id/row_name_1"
                 style="@style/CompactName"
-                android:text="DHUHR" />
+                android:text="@string/prayer_dhuhr" />
 
             <TextView
                 android:id="@+id/row_name_2"
                 style="@style/CompactName"
-                android:text="ASR" />
+                android:text="@string/prayer_asr" />
 
             <TextView
                 android:id="@+id/row_name_3"
                 style="@style/CompactName"
-                android:text="MAGHRIB" />
+                android:text="@string/prayer_maghrib" />
 
             <TextView
                 android:id="@+id/row_name_4"
                 style="@style/CompactName"
-                android:text="ISHA" />
+                android:text="@string/prayer_isha" />
         </LinearLayout>
 
         <LinearLayout
@@ -164,27 +172,27 @@
             <TextView
                 android:id="@+id/row_time_0"
                 style="@style/CompactTime"
-                android:text="00:00" />
+                android:text="@string/time_placeholder" />
 
             <TextView
                 android:id="@+id/row_time_1"
                 style="@style/CompactTime"
-                android:text="00:00" />
+                android:text="@string/time_placeholder" />
 
             <TextView
                 android:id="@+id/row_time_2"
                 style="@style/CompactTime"
-                android:text="00:00" />
+                android:text="@string/time_placeholder" />
 
             <TextView
                 android:id="@+id/row_time_3"
                 style="@style/CompactTime"
-                android:text="00:00" />
+                android:text="@string/time_placeholder" />
 
             <TextView
                 android:id="@+id/row_time_4"
                 style="@style/CompactTime"
-                android:text="00:00" />
+                android:text="@string/time_placeholder" />
         </LinearLayout>
     </LinearLayout>
 
@@ -214,7 +222,7 @@
             android:fontFamily="NDot55All"
             android:includeFontPadding="false"
             android:letterSpacing="0.18"
-            android:text="SYNCING"
+            android:text="@string/label_syncing"
             android:textColor="@color/nt_grey_label"
             android:textSize="10sp" />
     </LinearLayout>
@@ -246,7 +254,7 @@
             android:fontFamily="NDot55All"
             android:includeFontPadding="false"
             android:letterSpacing="0.04"
-            android:text="DHUHR"
+            android:text="@string/prayer_dhuhr"
             android:textColor="@color/nt_white"
             android:textSize="20sp" />
     </LinearLayout>

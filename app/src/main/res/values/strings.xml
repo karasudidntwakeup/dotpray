@@ -2,4 +2,17 @@
 <resources>
     <string name="widget_label">dotpray</string>
     <string name="widget_description">Next prayer, live countdown, and the day\'s times.</string>
+
+    <!-- Layout placeholders; the widget replaces the live values at render time. -->
+    <string name="label_next">NEXT</string>
+    <string name="label_syncing">SYNCING</string>
+    <string name="prayer_fajr">FAJR</string>
+    <string name="prayer_dhuhr">DHUHR</string>
+    <string name="prayer_asr">ASR</string>
+    <string name="prayer_maghrib">MAGHRIB</string>
+    <string name="prayer_isha">ISHA</string>
+    <string name="time_placeholder">00:00</string>
+    <string name="countdown_placeholder">--:--</string>
+    <string name="unit_min">MIN</string>
+    <string name="bar_label_placeholder">FAJR &gt; FAJR</string>
 </resources>

@@ -6,11 +6,16 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
 
-    <!-- Widget only: no activity, no icon, no data entry. Nothing worth backing
-         up, and nothing that should leave the device, so backup stays off. -->
+    <!-- Widget only: no activity, no data entry. Nothing worth backing up, and
+         nothing that should leave the device, so backup stays off. -->
     <application
+        android:icon="@mipmap/ic_launcher"
         android:label="@string/widget_label"
+        android:roundIcon="@mipmap/ic_launcher"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="false"
+        android:supportsRtl="false"
         android:usesCleartextTraffic="false">
 
         <service

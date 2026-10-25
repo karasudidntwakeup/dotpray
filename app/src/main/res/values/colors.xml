@@ -9,4 +9,6 @@
     <color name="nt_grey_past">#FFB0B0B0</color>
     <color name="nt_hairline">#FFDCDCDC</color>
     <color name="nt_bar_track">#FFE3E3E3</color>
+    <!-- Launcher icon background; stays dark in both themes. -->
+    <color name="ic_launcher_background">#FF0B0B0B</color>
 </resources>
