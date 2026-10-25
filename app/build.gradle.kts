@@ -19,8 +19,8 @@ android {
         applicationId = "dev.karasu.ndotprayer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.4"
+        versionCode = 4
+        versionName = "2.0"
     }
 
     signingConfigs {
