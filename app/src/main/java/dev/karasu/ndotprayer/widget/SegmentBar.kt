@@ -7,28 +7,36 @@ import android.graphics.Paint
 import dev.karasu.ndotprayer.R
 
 /**
- * The segmented progress bar, painted to a bitmap.
+ * The prayer bar, painted to a bitmap.
  *
  * RemoteViews may not inflate custom views, so the bar travels to the widget
  * host as pixels instead: [WidgetRenderer] hands it to an ImageView.
  *
- * Filled blocks use the theme's primary ink, the leading filled block is
- * Nothing Red, the unfilled track stays a shade off the panel.
+ * It is five rails, one per prayer column, not an elapsed-time fill. The rail
+ * above the next prayer is Nothing Red, the rails already behind it use the
+ * theme ink, and the rest stay on the track colour. That keeps the marker on
+ * the same line as the prayer names and times below it.
  */
 object SegmentBar {
 
-    private const val SEGMENTS = 28
+    /** One rail per prayer, matching the five columns in both layouts. */
+    const val SEGMENTS = 5
+
+    const val TRACK = 0
+    const val PAST = 1
+    const val ACTIVE = 2
+
     private const val HEIGHT_DP = 4f
-    private const val GAP_DP = 1f
+    private const val GAP_DP = 6f
 
     /** Width the host will receive; scales to the cell without distortion notice. */
     private const val DEFAULT_WIDTH_DP = 250f
 
-    fun bitmap(context: Context, percent: Int): Bitmap {
+    fun bitmap(context: Context, states: IntArray?): Bitmap {
         val density = context.resources.displayMetrics.density
         val widthPx = (DEFAULT_WIDTH_DP * density).toInt()
         val heightPx = (HEIGHT_DP * density).coerceAtLeast(1f).toInt()
-        val gapPx = (GAP_DP * density * 0.75f).coerceAtLeast(1f)
+        val gapPx = (GAP_DP * density).coerceAtLeast(1f)
 
         val bitmap = Bitmap.createBitmap(widthPx, heightPx, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
@@ -38,17 +46,21 @@ object SegmentBar {
         val red = context.getColor(R.color.nt_red)
         val track = context.getColor(R.color.nt_bar_track)
 
-        val segmentWidth = (widthPx - (SEGMENTS - 1) * gapPx).toFloat() / SEGMENTS
-        val filled = ((percent.coerceIn(0, 100) / 100f) * SEGMENTS).toInt()
+        // Centre each rail in its own column. Inset both ends by half the gap,
+        // otherwise every rail sits half a gap to the left of the prayer name
+        // it describes. The launcher may stretch the bitmap, so the centres
+        // still match the five equal-width text columns.
+        val column = widthPx.toFloat() / SEGMENTS
+        val inset = gapPx / 2f
 
         repeat(SEGMENTS) { index ->
-            paint.color = when {
-                index < filled - 1 -> ink
-                index == filled - 1 -> red
+            paint.color = when (states?.getOrNull(index)) {
+                ACTIVE -> red
+                PAST -> ink
                 else -> track
             }
-            val startX = index * (segmentWidth + gapPx)
-            canvas.drawRect(startX, 0f, startX + segmentWidth, heightPx.toFloat(), paint)
+            val startX = index * column + inset
+            canvas.drawRect(startX, 0f, startX + column - gapPx, heightPx.toFloat(), paint)
         }
         return bitmap
     }

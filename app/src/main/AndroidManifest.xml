@@ -51,6 +51,12 @@
             </intent-filter>
         </receiver>
 
+        <!-- Widget tap: refresh location + timings on demand. Reached only
+             through the widget's own PendingIntent. -->
+        <receiver
+            android:name=".widget.RefreshReceiver"
+            android:exported="false" />
+
     </application>
 
 </manifest>

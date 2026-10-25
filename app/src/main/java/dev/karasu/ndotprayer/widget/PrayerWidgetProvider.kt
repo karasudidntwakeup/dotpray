@@ -117,11 +117,15 @@ class PrayerWidgetProvider : AppWidgetProvider() {
 object AlarmHelper {
 
     const val ACTION_FLIP = "dev.karasu.ndotprayer.PRAYER_FIRED"
+    const val ACTION_FLIP_SAFETY = "dev.karasu.ndotprayer.PRAYER_SAFETY"
+    const val ACTION_FORMAT = "dev.karasu.ndotprayer.FORMAT_SWITCH"
+    const val ACTION_ANNOUNCE_END = "dev.karasu.ndotprayer.ANNOUNCE_END"
 
     private const val REQUEST_FLIP = 5151
     private const val REQUEST_HOURS10 = 5152
     private const val REQUEST_HOUR1 = 5153
     private const val REQUEST_SAFETY = 5154
+    private const val REQUEST_ANNOUNCE_END = 5155
 
     private const val MINUTE = 60_000L
     private const val HOUR = 60 * MINUTE
@@ -141,31 +145,46 @@ object AlarmHelper {
         // ever be lost, the widget still heals two minutes later — the countdown
         // must never sit stuck below zero, and the bar must reset with it.
         set(manager, context, REQUEST_FLIP, triggerAtMillis)
-        set(manager, context, REQUEST_SAFETY, triggerAtMillis + SAFETY_DELAY)
+        set(manager, context, REQUEST_SAFETY, triggerAtMillis + SAFETY_DELAY, ACTION_FLIP_SAFETY)
 
         // Just past the 10-hour crossing: "10:45" must switch to the form
         // that feeds the single-digit-hour precision.
         if (remaining > 10 * HOUR) {
-            set(manager, context, REQUEST_HOURS10, triggerAtMillis - 10 * HOUR + GRACE)
+            set(manager, context, REQUEST_HOURS10, triggerAtMillis - 10 * HOUR + GRACE, ACTION_FORMAT)
         } else {
-            cancel(manager, context, REQUEST_HOURS10)
+            cancel(manager, context, REQUEST_HOURS10, ACTION_FORMAT)
         }
 
         // Just past the hour crossing: "1:07" must switch to "67 MIN". The
         // grace keeps delivery strictly below one hour.
         if (remaining > HOUR) {
-            set(manager, context, REQUEST_HOUR1, triggerAtMillis - HOUR + GRACE)
+            set(manager, context, REQUEST_HOUR1, triggerAtMillis - HOUR + GRACE, ACTION_FORMAT)
         } else {
-            cancel(manager, context, REQUEST_HOUR1)
+            cancel(manager, context, REQUEST_HOUR1, ACTION_FORMAT)
         }
     }
 
     fun cancel(context: Context) {
         val manager = context.getSystemService(android.app.AlarmManager::class.java) ?: return
         cancel(manager, context, REQUEST_FLIP)
-        cancel(manager, context, REQUEST_HOURS10)
-        cancel(manager, context, REQUEST_HOUR1)
-        cancel(manager, context, REQUEST_SAFETY)
+        cancel(manager, context, REQUEST_HOURS10, ACTION_FORMAT)
+        cancel(manager, context, REQUEST_HOUR1, ACTION_FORMAT)
+        cancel(manager, context, REQUEST_SAFETY, ACTION_FLIP_SAFETY)
+        cancel(manager, context, REQUEST_ANNOUNCE_END, ACTION_ANNOUNCE_END)
+    }
+
+    /** Hide the prayer-arrival animation after its short run. */
+    fun scheduleAnnouncementEnd(context: Context, delayMillis: Long) {
+        val manager = context.getSystemService(android.app.AlarmManager::class.java) ?: return
+        val at = System.currentTimeMillis() + delayMillis
+        val pending = pending(context, REQUEST_ANNOUNCE_END, ACTION_ANNOUNCE_END)
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()) {
+            manager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pending)
+        } else {
+            // Cosmetic timer: an inexact delivery is better than holding the
+            // overlay for the ten-minute window used by the prayer alarms.
+            manager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pending)
+        }
     }
 
     /**
@@ -179,8 +198,9 @@ object AlarmHelper {
         context: Context,
         requestCode: Int,
         triggerAtMillis: Long,
+        action: String = ACTION_FLIP,
     ) {
-        val pending = pending(context, requestCode)
+        val pending = pending(context, requestCode, action)
         val exact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()
         if (exact) {
             manager.setExactAndAllowWhileIdle(
@@ -199,13 +219,22 @@ object AlarmHelper {
         }
     }
 
-    private fun cancel(manager: android.app.AlarmManager, context: Context, requestCode: Int) {
-        manager.cancel(pending(context, requestCode))
+    private fun cancel(
+        manager: android.app.AlarmManager,
+        context: Context,
+        requestCode: Int,
+        action: String = ACTION_FLIP,
+    ) {
+        manager.cancel(pending(context, requestCode, action))
     }
 
     /** Immutable, and aimed at the unexported [FlipReceiver]: only this app can fire these. */
-    private fun pending(context: Context, requestCode: Int): PendingIntent {
-        val receiver = Intent(context, FlipReceiver::class.java).setAction(ACTION_FLIP)
+    private fun pending(
+        context: Context,
+        requestCode: Int,
+        action: String = ACTION_FLIP,
+    ): PendingIntent {
+        val receiver = Intent(context, FlipReceiver::class.java).setAction(action)
         return PendingIntent.getBroadcast(
             context,
             requestCode,

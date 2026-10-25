@@ -13,8 +13,6 @@ import java.time.ZoneId
  */
 object PrayerRepository {
 
-    private const val FALLBACK_WINDOW_MILLIS = 6L * 60 * 60 * 1000
-
     fun zone(): ZoneId = ZoneId.systemDefault()
 
     fun today(): LocalDate = LocalDate.now(zone())
@@ -40,18 +38,9 @@ object PrayerRepository {
             // Every cached prayer is in the past (stale cache with no tomorrow).
             else -> timeline.last()
         }
-        val previous = timeline.getOrNull(nextIndex - 1)
-
-        val windowStart = previous?.timeMillis ?: (next.timeMillis - FALLBACK_WINDOW_MILLIS)
-        val windowLength = (next.timeMillis - windowStart).coerceAtLeast(1L)
-        val progress = ((nowMillis - windowStart).toDouble() / windowLength.toDouble())
-            .coerceIn(0.0, 1.0)
-            .toFloat()
 
         return Snapshot(
-            previous = previous,
             next = next,
-            progress = progress,
             today = today.prayers.sortedBy { it.timeMillis },
         )
     }
@@ -69,18 +58,22 @@ object PrayerRepository {
     }
 
     /**
-     * Refreshes: re-detects the location via IP, then fetches today (and tomorrow,
-     * so the countdown survives past midnight). Blocking — call on IO.
+     * Refreshes the timings for the stored location. Location detection only
+     * happens on demand ([relocate]) or once on first setup, so background
+     * refreshes never move the widget.
      */
-    fun refresh(context: Context): Boolean {
+    fun refresh(context: Context, relocate: Boolean = false): Boolean {
         val prefs = Prefs.get(context)
         val zone = zone()
 
-        LocationDetector.detect()?.let { (lat, lon) ->
-            if (lat != prefs.latitude || lon != prefs.longitude) {
+        if (relocate || !prefs.hasLocation) {
+            LocationDetector.detect()?.let { (lat, lon) ->
+                val changed = lat != prefs.latitude || lon != prefs.longitude
+                // Persist the fix even when it matches the default, so later
+                // background refreshes stay local-only.
                 prefs.latitude = lat
                 prefs.longitude = lon
-                prefs.clearCache()
+                if (changed) prefs.clearCache()
             }
         }
 

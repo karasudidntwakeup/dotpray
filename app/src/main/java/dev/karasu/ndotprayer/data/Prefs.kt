@@ -38,6 +38,10 @@ object Prefs {
             get() = doubleOf(prefs.getLong(KEY_LON, DEFAULT_LONGITUDE_BITS))
             set(value) = prefs.edit().putLong(KEY_LON, bitsOf(value)).apply()
 
+        /** False until a location has been detected and stored at least once. */
+        val hasLocation: Boolean
+            get() = prefs.contains(KEY_LAT) && prefs.contains(KEY_LON)
+
         /** Cache identity: timings depend only on position, date and timezone. */
         fun signature(timeZoneId: String): String =
             "${bitsOf(latitude)}_${bitsOf(longitude)}_${DEFAULT_METHOD}_${DEFAULT_SCHOOL}_$timeZoneId"

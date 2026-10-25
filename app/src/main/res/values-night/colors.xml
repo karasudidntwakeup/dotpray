@@ -6,7 +6,7 @@
     <color name="nt_red">#FFFF3030</color>
     <color name="nt_grey_label">#FFA0A0A0</color>
     <color name="nt_grey_future">#FFA0A0A0</color>
-    <color name="nt_grey_past">#FF5A5A5A</color>
+    <color name="nt_grey_past">#FF707070</color>
     <color name="nt_hairline">#FF262626</color>
     <color name="nt_bar_track">#FF262626</color>
 </resources>

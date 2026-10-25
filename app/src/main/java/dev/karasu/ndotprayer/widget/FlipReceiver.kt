@@ -22,7 +22,13 @@ class FlipReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
+            AlarmHelper.ACTION_ANNOUNCE_END -> {
+                WidgetRenderer.endAnnouncement(context)
+                return
+            }
             AlarmHelper.ACTION_FLIP,
+            AlarmHelper.ACTION_FLIP_SAFETY,
+            AlarmHelper.ACTION_FORMAT,
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED -> Unit
             else -> return
@@ -36,6 +42,22 @@ class FlipReceiver : BroadcastReceiver() {
         ids.forEach { id ->
             manager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
         }
+
+        if (intent.action == AlarmHelper.ACTION_FLIP) {
+            // The alarm fires at (or a hair after) the prayer itself: the latest
+            // time in today's list is the prayer that just arrived.
+            val arrived = snapshot?.today?.lastOrNull {
+                it.timeMillis <= System.currentTimeMillis() + 5_000L
+            }
+            if (arrived != null) {
+                WidgetRenderer.announce(context, arrived.kind)
+                AlarmHelper.scheduleAnnouncementEnd(
+                    context,
+                    WidgetRenderer.ANNOUNCEMENT_DURATION_MS,
+                )
+            }
+        }
+
         PrayerWidgetProvider.reschedule(context)
         ThemeJob.schedule(context, replace = true)
         PrayerWidgetProvider.refreshIfNeeded(context)

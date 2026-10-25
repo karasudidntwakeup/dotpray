@@ -6,14 +6,15 @@ generic Android widget.
 
 ## What it shows
 
-**Full (4×2)** — the next prayer, a live countdown, a segmented progress bar for
-the current prayer window, and all five times in a table below the bar. Every
-label and number uses the dot face; the next time is the only red time.
+**Full (4×2)** — the next prayer, a live countdown, a five-rail prayer bar, and
+all five names and times in a table below it. Each rail sits over its prayer
+column: red on the next prayer, ink behind it, track ahead. Every label and
+number uses the dot face; the next time is the only red time.
 
-**Compact (2×2 and smaller)** — the countdown, the next prayer, and the bar.
-When the cell is tall enough, all five times appear under the bar with the next
-one in red; short cells drop that strip instead of clipping it. There is no
-date clutter, and no time is repeated.
+**Compact (2×2 and smaller)** — the countdown, the next prayer, and the same
+five-rail bar. When the cell is tall enough, every prayer name and time appears
+under the bar (Fajr included); short cells drop that strip instead of clipping
+it. There is no date clutter, and no time is repeated.
 
 ## How it works
 

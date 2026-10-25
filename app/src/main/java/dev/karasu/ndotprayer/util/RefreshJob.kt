@@ -8,9 +8,12 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import android.os.PersistableBundle
 import dev.karasu.ndotprayer.data.PrayerRepository
 import dev.karasu.ndotprayer.widget.PrayerWidgetProvider
 import dev.karasu.ndotprayer.widget.WidgetRenderer
+
+private const val EXTRA_RELOCATE = "relocate"
 
 /**
  * Data refetch runs through [JobScheduler] on purpose.
@@ -24,6 +27,7 @@ object RefreshJob {
 
     private const val JOB_NOW = 20501
     private const val JOB_PERIODIC = 20502
+    private const val JOB_MANUAL = 20504
 
     /** Refetch soon, only when the widget actually needs it. */
     fun scheduleNow(context: Context) {
@@ -35,6 +39,20 @@ object RefreshJob {
             .build()
         scheduler.cancel(JOB_NOW)
         scheduler.schedule(info)
+    }
+
+    /** A widget tap: always fetch, and re-detect the location once. */
+    fun scheduleManual(context: Context): Boolean {
+        val scheduler = context.getSystemService(JobScheduler::class.java) ?: return false
+        val extras = PersistableBundle().apply { putBoolean(EXTRA_RELOCATE, true) }
+        val info = JobInfo.Builder(JOB_MANUAL, ComponentName(context, RefreshWorker::class.java))
+            .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+            .setMinimumLatency(0L)
+            .setOverrideDeadline(30_000L)
+            .setExtras(extras)
+            .build()
+        scheduler.cancel(JOB_MANUAL)
+        return scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS
     }
 
     /** Hourly keeper so the countdown survives midnight and offline days. */
@@ -53,6 +71,7 @@ object RefreshJob {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
         scheduler.cancel(JOB_NOW)
         scheduler.cancel(JOB_PERIODIC)
+        scheduler.cancel(JOB_MANUAL)
     }
 }
 
@@ -63,10 +82,11 @@ class RefreshWorker : JobService() {
 
     override fun onStartJob(params: JobParameters?): Boolean {
         val context: Context = this
+        val relocate = params?.extras?.getBoolean(EXTRA_RELOCATE, false) == true
         Thread {
             try {
-                if (PrayerRepository.needsRefresh(context)) {
-                    PrayerRepository.refresh(context)
+                if (relocate || PrayerRepository.needsRefresh(context)) {
+                    PrayerRepository.refresh(context, relocate = relocate)
                 }
             } finally {
                 mainHandler.post {

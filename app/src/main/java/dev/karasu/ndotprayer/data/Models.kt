@@ -35,16 +35,9 @@ data class DayTimings(
     }
 }
 
-/**
- * Everything the widget needs for one render pass.
- *
- * [progress] is the fraction of the window that has elapsed between the previous
- * prayer and the next one — that drives the segmented bar.
- */
+/** Everything the widget needs for one render pass. */
 data class Snapshot(
-    val previous: Prayer?,
     val next: Prayer,
-    val progress: Float,
     val today: List<Prayer>,
 )
 

@@ -14,11 +14,13 @@
         android:scaleType="fitXY" />
 
     <LinearLayout
+        android:id="@+id/content"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical"
         android:paddingHorizontal="14dp"
-        android:paddingVertical="12dp">
+        android:paddingTop="14dp"
+        android:paddingBottom="18dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -69,32 +71,94 @@
                 android:textSize="12sp" />
         </LinearLayout>
 
-        <!-- The countdown takes the free height and sits in the optical centre. -->
-        <Chronometer
-            android:id="@+id/text_countdown"
+        <!-- The countdown takes the free height and sits in the optical centre.
+             The unit is a separate, smaller run so the big number stays the
+             hero; the nested wrap_content row keeps both on one baseline. -->
+        <LinearLayout
+            android:id="@+id/countdown_area"
             android:layout_width="match_parent"
             android:layout_height="0dp"
             android:layout_weight="1"
-            android:fontFamily="NDot55All"
             android:gravity="start|center_vertical"
-            android:includeFontPadding="false"
-            android:text="--:--"
-            android:textColor="@color/nt_white"
-            android:textSize="42sp" />
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:id="@+id/countdown_row"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:baselineAligned="true"
+                android:orientation="horizontal">
+
+                <Chronometer
+                    android:id="@+id/text_countdown"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:fontFamily="NDot55All"
+                    android:includeFontPadding="false"
+                    android:text="--:--"
+                    android:textColor="@color/nt_white"
+                    android:textSize="42sp" />
+
+                <TextView
+                    android:id="@+id/text_unit"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="NDot55All"
+                    android:includeFontPadding="false"
+                    android:text="MIN"
+                    android:textColor="@color/nt_white"
+                    android:textSize="14sp" />
+            </LinearLayout>
+        </LinearLayout>
 
         <ImageView
             android:id="@+id/bar"
             android:layout_width="match_parent"
             android:layout_height="4dp"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="8dp"
             android:scaleType="fitXY" />
 
-        <!-- All five times under the bar, including the next one in red. -->
+        <!-- All five prayers under the bar, including Fajr. The next name and
+             time are red; past times are dim. -->
+        <LinearLayout
+            android:id="@+id/names_row"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/row_name_0"
+                style="@style/CompactName"
+                android:text="FAJR" />
+
+            <TextView
+                android:id="@+id/row_name_1"
+                style="@style/CompactName"
+                android:text="DHUHR" />
+
+            <TextView
+                android:id="@+id/row_name_2"
+                style="@style/CompactName"
+                android:text="ASR" />
+
+            <TextView
+                android:id="@+id/row_name_3"
+                style="@style/CompactName"
+                android:text="MAGHRIB" />
+
+            <TextView
+                android:id="@+id/row_name_4"
+                style="@style/CompactName"
+                android:text="ISHA" />
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/times_row"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="3dp"
             android:orientation="horizontal">
 
             <TextView
@@ -122,5 +186,68 @@
                 style="@style/CompactTime"
                 android:text="00:00" />
         </LinearLayout>
+    </LinearLayout>
+
+    <!-- Tap-to-refresh: a dot spinner that runs only while this layer is visible. -->
+    <LinearLayout
+        android:id="@+id/loading"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/loading_spinner"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:background="@null"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/loading_dots"
+            android:indeterminateTint="@null" />
+
+        <TextView
+            android:id="@+id/loading_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:fontFamily="NDot55All"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.18"
+            android:text="SYNCING"
+            android:textColor="@color/nt_grey_label"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Prayer arrival: the walking figure, with the prayer name instead of
+         "walking". The ProgressBar animation only runs while this is visible. -->
+    <LinearLayout
+        android:id="@+id/announce"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <ProgressBar
+            android:id="@+id/walk"
+            android:layout_width="76dp"
+            android:layout_height="76dp"
+            android:background="@null"
+            android:indeterminate="true"
+            android:indeterminateDrawable="@drawable/walk_dots"
+            android:indeterminateTint="@null" />
+
+        <TextView
+            android:id="@+id/announce_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:fontFamily="NDot55All"
+            android:includeFontPadding="false"
+            android:letterSpacing="0.04"
+            android:text="DHUHR"
+            android:textColor="@color/nt_white"
+            android:textSize="20sp" />
     </LinearLayout>
 </FrameLayout>
