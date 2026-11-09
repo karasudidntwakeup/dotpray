@@ -15,4 +15,11 @@
     <string name="countdown_placeholder">--:--</string>
     <string name="unit_min">MIN</string>
     <string name="bar_label_placeholder">FAJR &gt; FAJR</string>
+
+    <!-- Prayer-arrival notification. -->
+    <string name="notification_channel_name">Prayer times</string>
+    <string name="notification_channel_description">Alerts when a prayer time arrives.</string>
+    <string name="notification_label">PRAYER TIME</string>
+    <string name="notification_title">%1$s PRAYER</string>
+    <string name="notification_text">It\'s time for %1$s.</string>
 </resources>

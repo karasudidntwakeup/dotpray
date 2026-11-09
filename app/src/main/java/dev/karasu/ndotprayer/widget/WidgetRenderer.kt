@@ -11,7 +11,6 @@ import android.widget.RemoteViews
 import dev.karasu.ndotprayer.R
 import dev.karasu.ndotprayer.data.Format
 import dev.karasu.ndotprayer.data.Prayer
-import dev.karasu.ndotprayer.data.PrayerKind
 import dev.karasu.ndotprayer.data.PrayerRepository
 import dev.karasu.ndotprayer.data.Snapshot
 
@@ -40,13 +39,8 @@ object WidgetRenderer {
     /** In the compact widget, below this height the times strip is dropped. */
     private const val COMPACT_TIMES_MIN_HEIGHT_DP = 155
 
-    /** How long the prayer-arrival walk stays on screen. */
-    const val ANNOUNCEMENT_DURATION_MS = 6_000L
-
     private const val REQUEST_REFRESH = 6001
-
-    @Volatile
-    private var announcement: Pair<PrayerKind, Long>? = null
+    private const val REQUEST_PERMISSION = 6003
 
     /** Windows between prayers, in the dot face. */
     fun render(
@@ -54,7 +48,6 @@ object WidgetRenderer {
         appWidgetId: Int,
         snapshot: Snapshot?,
         loading: Boolean = false,
-        announce: PrayerKind? = activeAnnouncement(),
     ): RemoteViews {
         val (widthDp, heightDp) = sizeOf(context, appWidgetId)
         val compact = widthDp < FULL_MIN_WIDTH_DP || heightDp < FULL_MIN_HEIGHT_DP
@@ -65,25 +58,23 @@ object WidgetRenderer {
         // background stays only as the widget-picker preview.
         views.setImageViewBitmap(R.id.panel_bg, PanelBackground.bitmap(context, widthDp, heightDp))
         views.setInt(R.id.root, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-        views.setOnClickPendingIntent(R.id.root, refreshPendingIntent(context))
+        // While notification permission is missing, the tap has to go straight
+        // to an activity: a receiver cannot open one from the background.
+        views.setOnClickPendingIntent(
+            R.id.root,
+            if (NotificationPermissionActivity.needsPrompt(context)) {
+                permissionPendingIntent(context)
+            } else {
+                refreshPendingIntent(context)
+            },
+        )
 
         val palette = Palette(context)
-        val arrival = if (loading) null else announce
-        val announcing = arrival != null
         views.setViewVisibility(R.id.loading, if (loading) View.VISIBLE else View.GONE)
-        views.setViewVisibility(R.id.announce, if (announcing) View.VISIBLE else View.GONE)
-        views.setViewVisibility(
-            R.id.content,
-            if (loading || announcing) View.GONE else View.VISIBLE,
-        )
+        views.setViewVisibility(R.id.content, if (loading) View.GONE else View.VISIBLE)
 
         if (loading) {
             views.setTextColor(R.id.loading_text, palette.label)
-            return views
-        }
-        if (arrival != null) {
-            views.setTextViewText(R.id.announce_text, arrival.label)
-            views.setTextColor(R.id.announce_text, palette.ink)
             return views
         }
 
@@ -331,18 +322,6 @@ object WidgetRenderer {
         R.id.row_time_4,
     )
 
-    /** Show the prayer that just arrived, walking across the panel for a moment. */
-    fun announce(context: Context, kind: PrayerKind) {
-        announcement = kind to (System.currentTimeMillis() + ANNOUNCEMENT_DURATION_MS)
-        push(context)
-    }
-
-    /** Hide the arrival animation immediately (called by its timer). */
-    fun endAnnouncement(context: Context) {
-        announcement = null
-        push(context)
-    }
-
     /** A tap: replace the content with the dot loading state until the job repaints. */
     fun pushLoading(context: Context) {
         val manager = AppWidgetManager.getInstance(context)
@@ -356,9 +335,6 @@ object WidgetRenderer {
         }
     }
 
-    private fun activeAnnouncement(): PrayerKind? =
-        announcement?.takeIf { System.currentTimeMillis() < it.second }?.first
-
     /** The launcher sends this as us, so the receiver can stay unexported. */
     private fun refreshPendingIntent(context: Context): PendingIntent {
         val intent = Intent(context, RefreshReceiver::class.java)
@@ -366,6 +342,18 @@ object WidgetRenderer {
         return PendingIntent.getBroadcast(
             context,
             REQUEST_REFRESH,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    /** The one tap that also asks for notification permission, then refreshes. */
+    private fun permissionPendingIntent(context: Context): PendingIntent {
+        val intent = Intent(context, NotificationPermissionActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        return PendingIntent.getActivity(
+            context,
+            REQUEST_PERMISSION,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )

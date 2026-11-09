@@ -120,13 +120,11 @@ object AlarmHelper {
     const val ACTION_FLIP = "dev.karasu.ndotprayer.PRAYER_FIRED"
     const val ACTION_FLIP_SAFETY = "dev.karasu.ndotprayer.PRAYER_SAFETY"
     const val ACTION_FORMAT = "dev.karasu.ndotprayer.FORMAT_SWITCH"
-    const val ACTION_ANNOUNCE_END = "dev.karasu.ndotprayer.ANNOUNCE_END"
 
     private const val REQUEST_FLIP = 5151
     private const val REQUEST_HOURS10 = 5152
     private const val REQUEST_HOUR1 = 5153
     private const val REQUEST_SAFETY = 5154
-    private const val REQUEST_ANNOUNCE_END = 5155
 
     private const val MINUTE = 60_000L
     private const val HOUR = 60 * MINUTE
@@ -171,22 +169,6 @@ object AlarmHelper {
         cancel(manager, context, REQUEST_HOURS10, ACTION_FORMAT)
         cancel(manager, context, REQUEST_HOUR1, ACTION_FORMAT)
         cancel(manager, context, REQUEST_SAFETY, ACTION_FLIP_SAFETY)
-        cancel(manager, context, REQUEST_ANNOUNCE_END, ACTION_ANNOUNCE_END)
-    }
-
-    /** Hide the prayer-arrival animation after its short run. */
-    @SuppressLint("MissingPermission") // USE_EXACT_ALARM is declared; guarded below.
-    fun scheduleAnnouncementEnd(context: Context, delayMillis: Long) {
-        val manager = context.getSystemService(android.app.AlarmManager::class.java) ?: return
-        val at = System.currentTimeMillis() + delayMillis
-        val pending = pending(context, REQUEST_ANNOUNCE_END, ACTION_ANNOUNCE_END)
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()) {
-            manager.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pending)
-        } else {
-            // Cosmetic timer: an inexact delivery is better than holding the
-            // overlay for the ten-minute window used by the prayer alarms.
-            manager.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pending)
-        }
     }
 
     /**

@@ -5,9 +5,11 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Widget only: no activity, no data entry. Nothing worth backing up, and
-         nothing that should leave the device, so backup stays off. -->
+    <!-- Widget only: no launcher entry, no data entry. The single activity is
+         the invisible notification-permission prompt. Nothing worth backing up,
+         and nothing that should leave the device, so backup stays off. -->
     <application
         android:icon="@mipmap/ic_launcher"
         android:label="@string/widget_label"
@@ -17,6 +19,15 @@
         android:fullBackupContent="false"
         android:supportsRtl="false"
         android:usesCleartextTraffic="false">
+
+        <!-- Invisible prompt for the prayer notification (Android 13+). No
+             launcher entry: a widget tap opens it only while permission is
+             missing, then it finishes. -->
+        <activity
+            android:name=".widget.NotificationPermissionActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
 
         <service
             android:name=".util.RefreshWorker"

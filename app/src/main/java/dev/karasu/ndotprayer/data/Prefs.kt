@@ -21,6 +21,7 @@ object Prefs {
     private const val KEY_LAT = "latitude"
     private const val KEY_LON = "longitude"
     private const val KEY_SIGNATURE = "cache_signature"
+    private const val KEY_NOTIFICATION_PROMPTED = "notification_prompted"
     private const val CACHE_DAY_PREFIX = "day_"
     private const val CACHE_META_PREFIX = "day_meta_"
 
@@ -41,6 +42,11 @@ object Prefs {
         /** False until a location has been detected and stored at least once. */
         val hasLocation: Boolean
             get() = prefs.contains(KEY_LAT) && prefs.contains(KEY_LON)
+
+        /** True once the notification permission prompt has actually been shown. */
+        var notificationPrompted: Boolean
+            get() = prefs.getBoolean(KEY_NOTIFICATION_PROMPTED, false)
+            set(value) = prefs.edit().putBoolean(KEY_NOTIFICATION_PROMPTED, value).apply()
 
         /** Cache identity: timings depend only on position, date and timezone. */
         fun signature(timeZoneId: String): String =

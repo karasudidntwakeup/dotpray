@@ -23,8 +23,10 @@ The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the uni
 
 - Tap the widget to refresh the location and timings on demand. While the fetch
   runs, the status line shows `SYNCING` and the rail stays in place.
-- When a prayer arrives, the walking-dot animation and its name replace the
-  countdown for six seconds; the widget then settles on the next prayer.
+- When a prayer arrives, a Nothing-styled notification announces it with the
+  prayer name, time and a red dot; the widget then settles on the next prayer.
+  Tapping the notification refreshes the widget. On Android 13+, the first
+  widget tap also asks for notification permission.
 
 ## How it works
 
@@ -34,7 +36,8 @@ The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the uni
 - The countdown is a host-side `Chronometer`, so there are no per-minute wakeups.
   Alarms only mark the boundaries: the flip at each prayer (exact,
   allow-while-idle, with a short safety re-render behind it) and the two
-  countdown format switches. A content-triggered job watches the system night
+  countdown format switches. The flip repaints the widget and posts the
+  prayer-arrival notification. A content-triggered job watches the system night
   setting and repaints as soon as the light/dark toggle changes; automatic
   sunset switches and anything the job misses are bounded by the 30-minute
   update, which also re-arms the alarms.
@@ -45,7 +48,9 @@ The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the uni
   in dark. The corner radii match Nothing's own widgets, and Nothing Red
   (`#FF3030`) marks the next prayer's time and the leading segment of the bar.
 
-Widget only: no activity, no launcher entry, no settings screen, no notifications.
+Widget only: no launcher entry and no settings screen. The only activity is an
+invisible notification-permission prompt, opened from a widget tap on Android
+13+ when notifications are still disabled.
 
 ## Privacy and security
 
@@ -55,8 +60,10 @@ Widget only: no activity, no launcher entry, no settings screen, no notification
 - **What is stored:** the fetched timings and the last known coordinates, in the
   app's private `SharedPreferences`. The app sets `allowBackup="false"`, so they
   are never copied off the device by backup.
-- **No runtime permissions.** Network, boot and exact-alarm access are all
-  install-time, so the app never asks you for anything.
+- **One runtime permission, for the notification.** Network, boot and
+  exact-alarm access are install-time. On Android 13+ the first widget tap asks
+  for `POST_NOTIFICATIONS`; deny it and the widget still works, only without
+  the prayer-arrival notification.
 - **Exported surface:** only the widget provider is exported, because the
   system delivers `APPWIDGET_UPDATE` to it — and it acts only on widget ids it
   actually owns. The boundary alarms go to a separate, unexported receiver, so

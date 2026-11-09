@@ -244,36 +244,4 @@
             android:textSize="12sp" />
     </LinearLayout>
 
-    <!-- Prayer arrival: the walking figure, with the prayer name instead of
-         "walking". The ProgressBar animation only runs while this is visible. -->
-    <LinearLayout
-        android:id="@+id/announce"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:gravity="center"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <ProgressBar
-            android:id="@+id/walk"
-            android:layout_width="108dp"
-            android:layout_height="108dp"
-            android:background="@null"
-            android:indeterminate="true"
-            android:indeterminateDrawable="@drawable/walk_dots"
-            android:indeterminateTint="@null" />
-
-        <TextView
-            android:id="@+id/announce_text"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:fontFamily="NDot55All"
-            android:includeFontPadding="false"
-            android:letterSpacing="0.04"
-            android:text="@string/prayer_dhuhr"
-            android:textColor="@color/nt_white"
-            android:textSize="28sp" />
-    </LinearLayout>
-
 </FrameLayout>
