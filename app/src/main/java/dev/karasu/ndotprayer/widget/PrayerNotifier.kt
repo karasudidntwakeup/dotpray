@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import android.widget.RemoteViews
 import dev.karasu.ndotprayer.R
 import dev.karasu.ndotprayer.data.Format
@@ -23,6 +24,8 @@ import dev.karasu.ndotprayer.data.Prayer
 object PrayerNotifier {
 
     private const val CHANNEL_ID = "prayer"
+    private const val REMINDER_CHANNEL = "prayer_reminders"
+    internal const val REMINDER_ID = 7102
     private const val NOTIFICATION_ID = 7101
     private const val REQUEST_REFRESH = 6002
 
@@ -55,6 +58,62 @@ object PrayerNotifier {
 
         manager.notify(NOTIFICATION_ID, notification)
     }
+
+    fun prepareReminder(context: Context): Boolean {
+        if (!Build.MANUFACTURER.equals("Nothing", ignoreCase = true) ||
+            !(Build.DEVICE.equals("Pong", ignoreCase = true) ||
+                Build.MODEL == "A065" || Build.MODEL == "AIN065")
+        ) return false
+
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return false
+        if (manager.getNotificationChannel(REMINDER_CHANNEL) == null) {
+            manager.createNotificationChannel(
+                NotificationChannel(
+                    REMINDER_CHANNEL,
+                    context.getString(R.string.reminder_channel_name),
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                ).apply {
+                    description = context.getString(R.string.reminder_channel_description)
+                    enableLights(true)
+                },
+            )
+        }
+        return true
+    }
+
+    fun remind(context: Context, prayer: Prayer, remainingMillis: Long) {
+        val manager = context.getSystemService(NotificationManager::class.java) ?: return
+        if (!canNotify(context, manager)) return
+
+        if (Build.VERSION.SDK_INT >= 36 && manager.canPostPromotedNotifications()) {
+            try {
+                context.startForegroundService(
+                    Intent(context, PrayerCountdownService::class.java)
+                        .putExtra(AlarmHelper.EXTRA_PRAYER_TIME, prayer.timeMillis)
+                        .putExtra(PrayerCountdownService.EXTRA_PRAYER_LABEL, prayer.kind.label),
+                )
+                return
+            } catch (error: IllegalStateException) {
+                Log.w("NDotPrayer", "Could not start the prayer countdown", error)
+            }
+        }
+
+        manager.notify(
+            REMINDER_ID,
+            reminderBuilder(context, prayer.kind.label, prayer.timeMillis, remainingMillis)
+                .setAutoCancel(true)
+                .build(),
+        )
+    }
+
+    internal fun reminderBuilder(
+        context: Context, prayerLabel: String, prayerTime: Long, remainingMillis: Long,
+    ): Notification.Builder = Notification.Builder(context, REMINDER_CHANNEL)
+        .setSmallIcon(R.drawable.ic_notification)
+        .setContentTitle(context.getString(R.string.reminder_title, prayerLabel))
+        .setContentText(context.getString(R.string.reminder_text, Format.clock(prayerTime)))
+        .setCategory(Notification.CATEGORY_REMINDER)
+        .setTimeoutAfter(remainingMillis)
 
     /** The channel exists as soon as the app has posted once. */
     private fun ensureChannel(context: Context, manager: NotificationManager) {

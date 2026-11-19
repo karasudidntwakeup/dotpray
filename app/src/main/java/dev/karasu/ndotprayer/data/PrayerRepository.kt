@@ -2,6 +2,7 @@ package dev.karasu.ndotprayer.data
 
 import android.content.Context
 import android.util.Log
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -20,29 +21,13 @@ object PrayerRepository {
     /** Null when nothing is cached yet — the widget shows a placeholder and refreshes. */
     fun snapshot(context: Context, nowMillis: Long = System.currentTimeMillis()): Snapshot? {
         val prefs = Prefs.get(context)
-        val zone = zone()
-        val date = LocalDate.now(zone)
-
-        val today = prefs.getDay(date) ?: return null
-        val tomorrow = prefs.getDay(date.plusDays(1))
-
-        val timeline = buildList {
-            addAll(today.prayers.sortedBy { it.timeMillis })
-            tomorrow?.prayers?.firstOrNull { it.kind == PrayerKind.FAJR }?.let { add(it) }
-        }
-        if (timeline.isEmpty()) return null
-
-        val nextIndex = timeline.indexOfFirst { it.timeMillis > nowMillis }
-        val next = when {
-            nextIndex >= 0 -> timeline[nextIndex]
-            // Every cached prayer is in the past (stale cache with no tomorrow).
-            else -> timeline.last()
-        }
-
-        return Snapshot(
-            next = next,
-            today = today.prayers.sortedBy { it.timeMillis },
-        )
+        val date = Instant.ofEpochMilli(nowMillis).atZone(zone()).toLocalDate()
+        val prayers = prefs.getDay(date)?.prayers?.sortedBy { it.timeMillis } ?: return null
+        val next = prayers.firstOrNull { it.timeMillis > nowMillis }
+            ?: prefs.getDay(date.plusDays(1))?.prayers?.firstOrNull { it.kind == PrayerKind.FAJR }
+            ?: prayers.lastOrNull()
+            ?: return null
+        return Snapshot(next = next, today = prayers)
     }
 
     /** True when the cache is missing, expired, or has no entry for tomorrow. */

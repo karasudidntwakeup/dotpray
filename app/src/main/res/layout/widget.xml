@@ -46,7 +46,7 @@
                 android:layout_weight="1"
                 android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
-                android:letterSpacing="0.22"
+                android:letterSpacing="0.16"
                 android:text="@string/label_next"
                 android:textColor="@color/nt_grey_label"
                 android:textSize="10sp" />
@@ -57,7 +57,8 @@
                 android:layout_height="wrap_content"
                 android:fontFamily="NDot55All"
                 android:includeFontPadding="false"
-                android:letterSpacing="0.04"
+                android:letterSpacing="0.07"
+                android:textScaleX="1.06"
                 android:text="@string/prayer_maghrib"
                 android:textColor="@color/nt_white"
                 android:textSize="14sp" />
@@ -95,16 +96,18 @@
 
                 <Chronometer
                     android:id="@+id/text_countdown"
+                    android:textScaleX="1.14"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:fontFamily="NDot55All"
                     android:includeFontPadding="false"
                     android:text="@string/countdown_placeholder"
                     android:textColor="@color/nt_white"
-                    android:textSize="52sp" />
+                    android:textSize="56sp" />
 
                 <TextView
                     android:id="@+id/text_unit"
+                    android:letterSpacing="0.07"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
@@ -116,38 +119,19 @@
             </LinearLayout>
         </LinearLayout>
 
-        <TextView
-            android:id="@+id/bar_label"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:fontFamily="NDot55All"
-            android:includeFontPadding="false"
-            android:letterSpacing="0.12"
-            android:text="@string/bar_label_placeholder"
-            android:textColor="@color/nt_grey_label"
-            android:textSize="9sp" />
-
         <ImageView
             android:id="@+id/bar"
             android:layout_width="match_parent"
             android:layout_height="4dp"
-            android:layout_marginTop="5dp"
+            android:layout_marginTop="8dp"
             android:importantForAccessibility="no"
             android:scaleType="fitXY" />
-
-        <ImageView
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:layout_marginTop="8dp"
-            android:background="@color/nt_hairline"
-            android:importantForAccessibility="no" />
 
         <!-- All five times; the next one is red. -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="10dp"
             android:orientation="horizontal">
 
             <LinearLayout style="@style/PrayerColumn">

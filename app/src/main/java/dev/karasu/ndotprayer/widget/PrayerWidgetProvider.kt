@@ -9,8 +9,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.util.Log
+import dev.karasu.ndotprayer.data.Prayer
 import dev.karasu.ndotprayer.data.PrayerRepository
-import dev.karasu.ndotprayer.util.Io
 import dev.karasu.ndotprayer.util.RefreshJob
 import dev.karasu.ndotprayer.util.ThemeJob
 
@@ -38,7 +38,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         ids.forEach { id ->
             appWidgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
         }
-        reschedule(context)
+        reschedule(context, snapshot?.next)
         ThemeJob.schedule(context)
         refreshIfNeeded(context)
     }
@@ -69,6 +69,7 @@ class PrayerWidgetProvider : AppWidgetProvider() {
     override fun onDisabled(context: Context) {
         // Last widget removed — nothing left to update.
         AlarmHelper.cancel(context)
+        RefreshJob.cancel(context)
         ThemeJob.cancel(context)
     }
 
@@ -77,37 +78,17 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         private fun component(context: Context) =
             ComponentName(context, PrayerWidgetProvider::class.java)
 
-        /** Repaints every placed widget from the cache and re-arms the boundary alarms. */
-        fun reschedule(context: Context) {
-            val next = PrayerRepository.snapshot(context)?.next ?: return
+        fun reschedule(context: Context, next: Prayer? = PrayerRepository.snapshot(context)?.next) {
+            val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(component(context))
+            if (ids.isEmpty() || next == null || next.timeMillis <= System.currentTimeMillis()) {
+                AlarmHelper.cancel(context)
+                return
+            }
             AlarmHelper.schedule(context, next.timeMillis)
         }
 
-        /** Heals the cache: the process is alive and network-allowed while the widget
-         *  broadcasts run, so the refresh happens right here instead of waiting for a job. */
         fun refreshIfNeeded(context: Context) {
-            if (!PrayerRepository.needsRefresh(context)) return
-            Io.io {
-                PrayerRepository.refresh(context)
-                Io.main { refreshNow(context) }
-            }
-            // Passive fallback tied to the scheduler, in case this pass failed.
             if (PrayerRepository.needsRefresh(context)) RefreshJob.scheduleNow(context)
-        }
-
-        /** Repaints now, and again if the cache turned out to be stale. */
-        fun refreshNow(context: Context) {
-            WidgetRenderer.push(context)
-            reschedule(context)
-            Io.io {
-                if (PrayerRepository.needsRefresh(context)) {
-                    PrayerRepository.refresh(context)
-                    Io.main {
-                        WidgetRenderer.push(context)
-                        reschedule(context)
-                    }
-                }
-            }
         }
     }
 }
@@ -119,14 +100,18 @@ object AlarmHelper {
 
     const val ACTION_FLIP = "dev.karasu.ndotprayer.PRAYER_FIRED"
     const val ACTION_FLIP_SAFETY = "dev.karasu.ndotprayer.PRAYER_SAFETY"
+    const val ACTION_REMINDER = "dev.karasu.ndotprayer.PRAYER_REMINDER"
+    const val EXTRA_PRAYER_TIME = "prayer_time"
     const val ACTION_FORMAT = "dev.karasu.ndotprayer.FORMAT_SWITCH"
 
     private const val REQUEST_FLIP = 5151
     private const val REQUEST_HOURS10 = 5152
     private const val REQUEST_HOUR1 = 5153
     private const val REQUEST_SAFETY = 5154
+    private const val REQUEST_REMINDER = 5155
 
     private const val MINUTE = 60_000L
+    const val REMINDER_LEAD = 3 * MINUTE
     private const val HOUR = 60 * MINUTE
     private const val GRACE = 2_000L
 
@@ -143,8 +128,15 @@ object AlarmHelper {
         // The prayer itself, then a short safety net: should the flip broadcast
         // ever be lost, the widget still heals two minutes later — the countdown
         // must never sit stuck below zero, and the bar must reset with it.
-        set(manager, context, REQUEST_FLIP, triggerAtMillis)
+        set(manager, context, REQUEST_FLIP, triggerAtMillis, prayerTime = triggerAtMillis)
         set(manager, context, REQUEST_SAFETY, triggerAtMillis + SAFETY_DELAY, ACTION_FLIP_SAFETY)
+
+        if (PrayerNotifier.prepareReminder(context) && remaining > REMINDER_LEAD) {
+            set(
+                manager, context, REQUEST_REMINDER, triggerAtMillis - REMINDER_LEAD,
+                ACTION_REMINDER, prayerTime = triggerAtMillis,
+            )
+        }
 
         // Just past the 10-hour crossing: "10:45" must switch to the form
         // that feeds the single-digit-hour precision.
@@ -166,6 +158,7 @@ object AlarmHelper {
     fun cancel(context: Context) {
         val manager = context.getSystemService(android.app.AlarmManager::class.java) ?: return
         cancel(manager, context, REQUEST_FLIP)
+        cancel(manager, context, REQUEST_REMINDER, ACTION_REMINDER)
         cancel(manager, context, REQUEST_HOURS10, ACTION_FORMAT)
         cancel(manager, context, REQUEST_HOUR1, ACTION_FORMAT)
         cancel(manager, context, REQUEST_SAFETY, ACTION_FLIP_SAFETY)
@@ -174,8 +167,7 @@ object AlarmHelper {
     /**
      * Exact where the platform allows it — the countdown has to flip at the
      * prayer's own instant, not on a ten-minute inexact grid — with an
-     * allow-while-idle inexact window as the fallback. Even waking from doze,
-     * allow-while-idle alarms are delivered on time.
+     * ten-minute window as the fallback.
      */
     @SuppressLint("MissingPermission") // USE_EXACT_ALARM is declared; guarded below.
     private fun set(
@@ -184,8 +176,9 @@ object AlarmHelper {
         requestCode: Int,
         triggerAtMillis: Long,
         action: String = ACTION_FLIP,
+        prayerTime: Long = 0,
     ) {
-        val pending = pending(context, requestCode, action)
+        val pending = pending(context, requestCode, action, prayerTime)
         val exact = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || manager.canScheduleExactAlarms()
         if (exact) {
             manager.setExactAndAllowWhileIdle(
@@ -210,7 +203,11 @@ object AlarmHelper {
         requestCode: Int,
         action: String = ACTION_FLIP,
     ) {
-        manager.cancel(pending(context, requestCode, action))
+        val intent = Intent(context, FlipReceiver::class.java).setAction(action)
+        val existing = PendingIntent.getBroadcast(
+            context, requestCode, intent, PendingIntent.FLAG_NO_CREATE or PendingIntent.FLAG_IMMUTABLE,
+        ) ?: return
+        manager.cancel(existing)
     }
 
     /** Immutable, and aimed at the unexported [FlipReceiver]: only this app can fire these. */
@@ -218,8 +215,11 @@ object AlarmHelper {
         context: Context,
         requestCode: Int,
         action: String = ACTION_FLIP,
+        prayerTime: Long = 0,
     ): PendingIntent {
-        val receiver = Intent(context, FlipReceiver::class.java).setAction(action)
+        val receiver = Intent(context, FlipReceiver::class.java)
+            .setAction(action)
+            .putExtra(EXTRA_PRAYER_TIME, prayerTime)
         return PendingIntent.getBroadcast(
             context,
             requestCode,

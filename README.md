@@ -27,6 +27,15 @@ The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the uni
   prayer name, time and a red dot; the widget then settles on the next prayer.
   Tapping the notification refreshes the widget. On Android 13+, the first
   widget tap also asks for notification permission.
+- On Nothing Phone (2), the **Pre-prayer reminders** notification category
+  starts a three-minute countdown before each prayer. On Nothing OS with
+  Android 16, enable **Glyph Progress** and allow dotpray's **Live Updates**
+  to see the countdown on the rear Glyph. For the standard notification
+  flash, enable **Glyph Interface** and choose a built-in Nothing sound in
+  **Settings → Apps → dotpray → Notifications**. Nothing OS uses the sound's
+  [matching Glyph pattern](https://support.nothing.tech/hc/en-us/articles/16770201348113-How-do-I-personalise-the-Glyph-Interface-for-notifications).
+  The reminder clears at prayer time. Android can delay alarms while idle, and
+  a reminder that arrives after prayer time is skipped.
 
 ## How it works
 
@@ -36,7 +45,7 @@ The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the uni
 - The countdown is a host-side `Chronometer`, so there are no per-minute wakeups.
   Alarms only mark the boundaries: the flip at each prayer (exact,
   allow-while-idle, with a short safety re-render behind it) and the two
-  countdown format switches. The flip repaints the widget and posts the
+  countdown format switches, plus the pre-prayer reminder on Phone (2). The flip repaints the widget and posts the
   prayer-arrival notification. A content-triggered job watches the system night
   setting and repaints as soon as the light/dark toggle changes; automatic
   sunset switches and anything the job misses are bounded by the 30-minute
@@ -63,7 +72,7 @@ invisible notification-permission prompt, opened from a widget tap on Android
 - **One runtime permission, for the notification.** Network, boot and
   exact-alarm access are install-time. On Android 13+ the first widget tap asks
   for `POST_NOTIFICATIONS`; deny it and the widget still works, only without
-  the prayer-arrival notification.
+  prayer notifications.
 - **Exported surface:** only the widget provider is exported, because the
   system delivers `APPWIDGET_UPDATE` to it — and it acts only on widget ids it
   actually owns. The boundary alarms go to a separate, unexported receiver, so

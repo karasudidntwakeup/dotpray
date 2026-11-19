@@ -32,12 +32,12 @@ object RefreshJob {
     /** Refetch soon, only when the widget actually needs it. */
     fun scheduleNow(context: Context) {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
+        if (scheduler.getPendingJob(JOB_NOW) != null) return
         val info = JobInfo.Builder(JOB_NOW, ComponentName(context, RefreshWorker::class.java))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
             .setMinimumLatency(2_000L)
             .setOverrideDeadline(60_000L)
             .build()
-        scheduler.cancel(JOB_NOW)
         scheduler.schedule(info)
     }
 

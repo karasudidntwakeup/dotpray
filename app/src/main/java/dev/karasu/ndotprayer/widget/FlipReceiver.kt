@@ -22,6 +22,7 @@ class FlipReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
+            AlarmHelper.ACTION_REMINDER,
             AlarmHelper.ACTION_FLIP,
             AlarmHelper.ACTION_FLIP_SAFETY,
             AlarmHelper.ACTION_FORMAT,
@@ -34,23 +35,33 @@ class FlipReceiver : BroadcastReceiver() {
         val ids = manager.getAppWidgetIds(
             ComponentName(context, PrayerWidgetProvider::class.java),
         )
-        val snapshot = PrayerRepository.snapshot(context)
+        if (ids.isEmpty()) return
+
+        val now = System.currentTimeMillis()
+        val snapshot = PrayerRepository.snapshot(context, now)
+        val prayerTime = intent.getLongExtra(AlarmHelper.EXTRA_PRAYER_TIME, 0)
+        if (intent.action == AlarmHelper.ACTION_REMINDER) {
+            val next = snapshot?.next ?: return
+            val remaining = prayerTime - now
+            if (next.timeMillis == prayerTime && remaining in 1..AlarmHelper.REMINDER_LEAD) {
+                PrayerNotifier.remind(context, next, remaining)
+            }
+            return
+        }
         ids.forEach { id ->
             manager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
         }
 
         if (intent.action == AlarmHelper.ACTION_FLIP) {
-            // The alarm fires at (or a hair after) the prayer itself: the latest
-            // time in today's list is the prayer that just arrived.
-            val arrived = snapshot?.today?.lastOrNull {
-                it.timeMillis <= System.currentTimeMillis() + 5_000L
+            val arrived = snapshot?.today?.firstOrNull {
+                it.timeMillis == prayerTime && prayerTime <= now
             }
             if (arrived != null) {
                 PrayerNotifier.notify(context, arrived)
             }
         }
 
-        PrayerWidgetProvider.reschedule(context)
+        PrayerWidgetProvider.reschedule(context, snapshot?.next)
         ThemeJob.schedule(context, replace = true)
         PrayerWidgetProvider.refreshIfNeeded(context)
     }

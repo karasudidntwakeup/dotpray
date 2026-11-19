@@ -124,17 +124,17 @@ object WidgetRenderer {
 
             // "10:45" is longer than "47"; shrink the number to the cell
             // instead of letting the 2x2 countdown clip. The dot face is
-            // about 0.48 em per character at its widest. Reserve room for the
+            // about 0.55 em per character after widening. Reserve room for the
             // smaller unit and its gap.
-            val baseSize = if (showsTimes) 42f else 38f
+            val baseSize = if (showsTimes) 44f else 40f
             val numberChars = when {
                 remaining >= 10 * HOUR -> 5f
                 hasHours -> 4f
                 else -> 2f
             }
-            val unitWidth = 3f * 14f * 0.48f
+            val unitWidth = 3f * 14f * 0.55f
             val size = (widthDp - 28f - 4f - unitWidth)
-                .div(numberChars * 0.48f)
+                .div(numberChars * 0.55f)
                 .coerceIn(20f, baseSize)
             views.setTextViewTextSize(R.id.text_countdown, TypedValue.COMPLEX_UNIT_SP, size)
             views.setTextViewTextSize(
@@ -143,10 +143,8 @@ object WidgetRenderer {
                 (size * 0.34f).coerceIn(10f, 14f),
             )
         } else {
-            views.setTextViewText(R.id.bar_label, "FAJR > FAJR")
-            views.setTextColor(R.id.bar_label, palette.label)
             bindFullSchedule(views, snapshot, next, now, palette)
-            views.setTextViewTextSize(R.id.text_countdown, TypedValue.COMPLEX_UNIT_SP, 52f)
+            views.setTextViewTextSize(R.id.text_countdown, TypedValue.COMPLEX_UNIT_SP, 56f)
             views.setTextViewTextSize(R.id.text_unit, TypedValue.COMPLEX_UNIT_SP, 16f)
         }
 
@@ -291,8 +289,6 @@ object WidgetRenderer {
                 if (showTimes) View.VISIBLE else View.GONE,
             )
         } else {
-            views.setTextViewText(R.id.bar_label, "--")
-            views.setTextColor(R.id.bar_label, palette.label)
         }
     }
 

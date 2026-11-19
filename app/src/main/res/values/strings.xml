@@ -14,7 +14,6 @@
     <string name="time_placeholder">00:00</string>
     <string name="countdown_placeholder">--:--</string>
     <string name="unit_min">MIN</string>
-    <string name="bar_label_placeholder">FAJR &gt; FAJR</string>
 
     <!-- Prayer-arrival notification. -->
     <string name="notification_channel_name">Prayer times</string>
@@ -22,4 +21,8 @@
     <string name="notification_label">PRAYER TIME</string>
     <string name="notification_title">%1$s PRAYER</string>
     <string name="notification_text">It\'s time for %1$s.</string>
+    <string name="reminder_channel_name">Pre-prayer reminders</string>
+    <string name="reminder_channel_description">A reminder 3 minutes before each prayer on Nothing Phone (2).</string>
+    <string name="reminder_title">%1$s is coming up</string>
+    <string name="reminder_text">Prayer time: %1$s</string>
 </resources>
