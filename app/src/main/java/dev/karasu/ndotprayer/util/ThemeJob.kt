@@ -7,6 +7,7 @@ import android.app.job.JobService
 import android.content.ComponentName
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Build
 import android.provider.Settings
 import dev.karasu.ndotprayer.widget.WidgetRenderer
 
@@ -38,6 +39,7 @@ object ThemeJob {
      * other caller leaves an already-pending trigger alone.
      */
     fun schedule(context: Context, replace: Boolean = false): Boolean {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) return false
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return false
         if (!replace && scheduler.getPendingJob(JOB_ID) != null) return true
 
@@ -74,18 +76,16 @@ object ThemeJob {
 
 /**
  * One theme change, one repaint. Re-registering the same job id in [onStartJob]
- * is the documented way to keep a content trigger alive (it replaces
- * `jobFinished`); the current job stops once the new one is in place.
+ * keeps the content trigger registered after the synchronous repaint.
  */
 class ThemeWorker : JobService() {
 
     override fun onStartJob(params: JobParameters): Boolean {
-        WidgetRenderer.push(ThemeJob.themed(this))
+        WidgetRenderer.push(this)
         // Re-registering the same id replaces this run; the next setting change
         // starts a fresh one. No getPendingJob shortcut here — the running job
         // would count as pending and we would never watch the next change.
-        if (ThemeJob.schedule(this, replace = true)) return true
-        jobFinished(params, false)
+        ThemeJob.schedule(this, replace = true)
         return false
     }
 

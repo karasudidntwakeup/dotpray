@@ -59,7 +59,8 @@ class PrayerCountdownService : Service() {
         return START_NOT_STICKY
     }
 
-    @android.annotation.TargetApi(36)
+    // The promotion extra is an inlined string. Nothing OS can read it on 36.
+    @android.annotation.SuppressLint("NewApi", "InlinedApi")
     private fun notification(label: String, prayerTime: Long, remaining: Long): Notification {
         val progress = ((remaining * 100 + AlarmHelper.REMINDER_LEAD - 1) /
             AlarmHelper.REMINDER_LEAD).toInt().coerceIn(1, 100)
@@ -69,8 +70,10 @@ class PrayerCountdownService : Service() {
             .setWhen(prayerTime)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
-            .addExtras(Bundle().apply { putBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING, true) })
             .setStyle(Notification.ProgressStyle().setProgress(progress))
+            .addExtras(Bundle().apply {
+                putBoolean(Notification.EXTRA_REQUEST_PROMOTED_ONGOING, true)
+            })
             .build()
     }
 

@@ -1,12 +1,58 @@
 <?xml version="1.0" encoding="utf-8"?>
-<animation-list xmlns:android="http://schemas.android.com/apk/res/android"
-    android:oneshot="false">
-    <item android:drawable="@drawable/loading_0" android:duration="80" />
-    <item android:drawable="@drawable/loading_1" android:duration="80" />
-    <item android:drawable="@drawable/loading_2" android:duration="80" />
-    <item android:drawable="@drawable/loading_3" android:duration="80" />
-    <item android:drawable="@drawable/loading_4" android:duration="80" />
-    <item android:drawable="@drawable/loading_5" android:duration="80" />
-    <item android:drawable="@drawable/loading_6" android:duration="80" />
-    <item android:drawable="@drawable/loading_7" android:duration="80" />
-</animation-list>
+<animated-vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt">
+    <aapt:attr name="android:drawable">
+        <vector
+            android:width="24dp"
+            android:height="24dp"
+            android:viewportWidth="24"
+            android:viewportHeight="24">
+            <group android:name="dots" android:pivotX="12" android:pivotY="12">
+                <path
+                    android:fillAlpha="0.125"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M10.40,4.0 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="0.25"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M16.06,6.34 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="0.375"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M18.40,12.0 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="0.5"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M16.06,17.66 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="0.625"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M10.40,20.0 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="0.75"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M4.74,17.66 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="0.875"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M2.40,12.0 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+                <path
+                    android:fillAlpha="1"
+                    android:fillColor="@color/nt_red"
+                    android:pathData="M4.74,6.34 a1.6,1.6 0,1 0,3.2 0 a1.6,1.6 0,1 0,-3.2 0" />
+            </group>
+        </vector>
+    </aapt:attr>
+    <target android:name="dots">
+        <aapt:attr name="android:animation">
+            <objectAnimator
+                android:duration="900"
+                android:interpolator="@android:interpolator/linear"
+                android:propertyName="rotation"
+                android:repeatCount="infinite"
+                android:valueFrom="0"
+                android:valueTo="360"
+                android:valueType="floatType" />
+        </aapt:attr>
+    </target>
+</animated-vector>

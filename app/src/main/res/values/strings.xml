@@ -6,6 +6,8 @@
     <!-- Layout placeholders; the widget replaces the live values at render time. -->
     <string name="label_next">NEXT</string>
     <string name="label_syncing">SYNCING</string>
+    <string name="label_unavailable">TAP TO SYNC</string>
+    <string name="unit_hrs">HRS</string>
     <string name="prayer_fajr">FAJR</string>
     <string name="prayer_dhuhr">DHUHR</string>
     <string name="prayer_asr">ASR</string>

@@ -5,366 +5,208 @@ import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Build
+import android.os.Bundle
+import android.os.SystemClock
+import android.util.SizeF
 import android.util.TypedValue
 import android.view.View
 import android.widget.RemoteViews
 import dev.karasu.ndotprayer.R
 import dev.karasu.ndotprayer.data.Format
-import dev.karasu.ndotprayer.data.Prayer
+import dev.karasu.ndotprayer.data.PrayerKind
 import dev.karasu.ndotprayer.data.PrayerRepository
 import dev.karasu.ndotprayer.data.Snapshot
+import dev.karasu.ndotprayer.util.ThemeJob
 
-/**
- * Turns a [Snapshot] into Nothing-styled [RemoteViews]:
- *
- *  - Nothing panel (light or dark, following the system) with a single hairline
- *    border and launcher corners,
- *  - Nothing's NDot55All dot face for every label and number, with letterspaced
- *    caps for labels,
- *  - Nothing Red on the next prayer time and the leading bar block; the next
- *    time appears once, in the strip under the bar.
- */
 object WidgetRenderer {
 
-    /** Below these sizes the five prayer columns don't fit — show the compact head. */
-    private const val FULL_MIN_WIDTH_DP = 240
-    private const val FULL_MIN_HEIGHT_DP = 170
+    private const val HOUR = 3_600_000L
+    private const val DEFAULT_WIDTH = 250f
+    private const val DEFAULT_HEIGHT = 160f
 
-    private const val DEFAULT_WIDTH_DP = 250
-    private const val DEFAULT_HEIGHT_DP = 160
+    private val names = intArrayOf(
+        R.id.row_name_0, R.id.row_name_1, R.id.row_name_2, R.id.row_name_3, R.id.row_name_4,
+    )
+    private val times = intArrayOf(
+        R.id.row_time_0, R.id.row_time_1, R.id.row_time_2, R.id.row_time_3, R.id.row_time_4,
+    )
+    private val rails = intArrayOf(R.id.rail_0, R.id.rail_1, R.id.rail_2, R.id.rail_3, R.id.rail_4)
 
-    private const val MINUTE = 60_000L
-    private const val HOUR = 60 * MINUTE
-
-    /** In the compact widget, below this height the times strip is dropped. */
-    private const val COMPACT_TIMES_MIN_HEIGHT_DP = 155
-
-    private const val REQUEST_REFRESH = 6001
-    private const val REQUEST_PERMISSION = 6003
-
-    /** Windows between prayers, in the dot face. */
     fun render(
         context: Context,
         appWidgetId: Int,
         snapshot: Snapshot?,
         loading: Boolean = false,
+        now: Long = System.currentTimeMillis(),
     ): RemoteViews {
-        val (widthDp, heightDp) = sizeOf(context, appWidgetId)
-        val compact = widthDp < FULL_MIN_WIDTH_DP || heightDp < FULL_MIN_HEIGHT_DP
-        val layout = if (compact) R.layout.widget_compact else R.layout.widget
-        val views = RemoteViews(context.packageName, layout)
-
-        // The panel paints its own corners (launcher radius); the layout's
-        // background stays only as the widget-picker preview.
-        views.setImageViewBitmap(R.id.panel_bg, PanelBackground.bitmap(context, widthDp, heightDp))
-        views.setInt(R.id.root, "setBackgroundColor", android.graphics.Color.TRANSPARENT)
-        // While notification permission is missing, the tap has to go straight
-        // to an activity: a receiver cannot open one from the background.
-        views.setOnClickPendingIntent(
-            R.id.root,
-            if (NotificationPermissionActivity.needsPrompt(context)) {
-                permissionPendingIntent(context)
-            } else {
-                refreshPendingIntent(context)
-            },
-        )
-
-        val palette = Palette(context)
-        views.setViewVisibility(R.id.loading, if (loading) View.VISIBLE else View.GONE)
-        views.setViewVisibility(R.id.content, if (loading) View.GONE else View.VISIBLE)
-
-        if (loading) {
-            views.setTextColor(R.id.loading_text, palette.label)
-            return views
-        }
-
-        if (snapshot == null) {
-            bindPlaceholder(context, views, compact, heightDp, palette)
-            return views
-        }
-
-        val next = snapshot.next
-        val now = System.currentTimeMillis()
-        val remaining = next.timeMillis - now
-        val hasHours = remaining >= HOUR
-
-        // The host's Chronometer ticks on the elapsedRealtime clock (device
-        // uptime), not on wallclock: a raw epoch base makes it count ~500k
-        // hours of nonsense. Translate the prayer's wallclock instant into
-        // the uptime clock at render time — it stays exact afterwards.
-        val base = android.os.SystemClock.elapsedRealtime() + remaining
-        views.setChronometerCountDown(R.id.text_countdown, true)
-        views.setChronometer(R.id.text_countdown, base, countdownFormat(remaining), true)
-        views.setTextViewText(R.id.text_unit, countdownUnit(remaining))
-        views.setViewVisibility(R.id.text_unit, View.VISIBLE)
-
-        views.setTextViewText(R.id.text_prayer, next.kind.label)
-        views.setTextViewText(R.id.text_time, Format.clock(next.timeMillis))
-
-        val showsTimes = !compact || heightDp >= COMPACT_TIMES_MIN_HEIGHT_DP
-        // The next time lives under the bar, in the schedule. Only a short
-        // compact cell (which drops the strip) repeats it in the hero row.
-        views.setViewVisibility(R.id.text_time, if (showsTimes) View.GONE else View.VISIBLE)
-
-        // Bind every colour, not just the stateful ones: the host inflates the
-        // layout in its own configuration, and the bitmaps above are painted in
-        // ours. Explicit colours keep text and panel on the same side of a
-        // light/dark switch (no white-on-white if the two ever disagree).
-        views.setTextColor(R.id.label_next, palette.label)
-        views.setTextColor(R.id.text_countdown, palette.ink)
-        views.setTextColor(R.id.text_unit, palette.ink)
-        views.setTextColor(R.id.text_prayer, palette.ink)
-        views.setTextColor(R.id.text_time, palette.red)
-
-        if (compact) {
-            // Short cells keep it to the hero; taller ones add names and times.
-            views.setViewVisibility(R.id.names_row, if (showsTimes) View.VISIBLE else View.GONE)
-            views.setViewVisibility(R.id.times_row, if (showsTimes) View.VISIBLE else View.GONE)
-            if (showsTimes) bindCompactSchedule(views, snapshot, next, now, palette)
-
-            // "10:45" is longer than "47"; shrink the number to the cell
-            // instead of letting the 2x2 countdown clip. The dot face is
-            // about 0.55 em per character after widening. Reserve room for the
-            // smaller unit and its gap.
-            val baseSize = if (showsTimes) 44f else 40f
-            val numberChars = when {
-                remaining >= 10 * HOUR -> 5f
-                hasHours -> 4f
-                else -> 2f
-            }
-            val unitWidth = 3f * 14f * 0.55f
-            val size = (widthDp - 28f - 4f - unitWidth)
-                .div(numberChars * 0.55f)
-                .coerceIn(20f, baseSize)
-            views.setTextViewTextSize(R.id.text_countdown, TypedValue.COMPLEX_UNIT_SP, size)
-            views.setTextViewTextSize(
-                R.id.text_unit,
-                TypedValue.COMPLEX_UNIT_SP,
-                (size * 0.34f).coerceIn(10f, 14f),
-            )
-        } else {
-            bindFullSchedule(views, snapshot, next, now, palette)
-            views.setTextViewTextSize(R.id.text_countdown, TypedValue.COMPLEX_UNIT_SP, 56f)
-            views.setTextViewTextSize(R.id.text_unit, TypedValue.COMPLEX_UNIT_SP, 16f)
-        }
-
-        // The bar is one rail per prayer column: red on the next prayer, ink
-        // on the prayers already behind us, track on the rest.
-        val activeIndex = snapshot.today.indexOfFirst { it.kind == next.kind }
-        val states = IntArray(SegmentBar.SEGMENTS) { index ->
-            val prayer = snapshot.today.getOrNull(index)
-            when {
-                index == activeIndex -> SegmentBar.ACTIVE
-                prayer != null && prayer.timeMillis <= now -> SegmentBar.PAST
-                else -> SegmentBar.TRACK
-            }
-        }
-        views.setImageViewBitmap(R.id.bar, SegmentBar.bitmap(context, states))
-
-        return views
-    }
-
-    /** The five names and times under the bar; the next prayer is red. */
-    private fun bindCompactSchedule(
-        views: RemoteViews,
-        snapshot: Snapshot,
-        next: Prayer,
-        now: Long,
-        palette: Palette,
-    ) {
-        snapshot.today.take(SegmentBar.SEGMENTS).forEachIndexed { index, prayer ->
-            val shown = displayPrayer(prayer, next)
-            val nameId = rowNameIds[index]
-            val timeId = rowTimeIds[index]
-            views.setTextViewText(nameId, shown.kind.label)
-            views.setTextColor(nameId, nameColor(shown, next, now, palette))
-            views.setTextViewText(timeId, Format.clock(shown.timeMillis))
-            views.setTextColor(timeId, timeColor(shown, next, now, palette))
-        }
-    }
-
-    /** The full table under the bar, with prayer names and the next time in red. */
-    private fun bindFullSchedule(
-        views: RemoteViews,
-        snapshot: Snapshot,
-        next: Prayer,
-        now: Long,
-        palette: Palette,
-    ) {
-        snapshot.today.take(SegmentBar.SEGMENTS).forEachIndexed { index, prayer ->
-            val shown = displayPrayer(prayer, next)
-            val nameId = rowNameIds[index]
-            val timeId = rowTimeIds[index]
-            views.setTextViewText(nameId, shown.kind.label)
-            views.setTextViewText(timeId, Format.clock(shown.timeMillis))
-            views.setTextColor(nameId, nameColor(shown, next, now, palette))
-            views.setTextColor(timeId, timeColor(shown, next, now, palette))
-        }
-    }
-
-    /**
-     * At night the next prayer is tomorrow's Fajr, which is not in today's
-     * list. Light the Fajr column with that upcoming time so the widget never
-     * loses Fajr, and the bar marks the column it belongs to.
-     */
-    private fun displayPrayer(prayer: Prayer, next: Prayer): Prayer =
-        if (prayer.kind == next.kind) next else prayer
-
-    private fun nameColor(prayer: Prayer, next: Prayer, now: Long, palette: Palette): Int = when {
-        prayer.timeMillis == next.timeMillis -> palette.ink
-        prayer.timeMillis <= now -> palette.past
-        else -> palette.label
-    }
-
-    /** Red marks the next prayer; past is dim, later is grey. */
-    private fun timeColor(prayer: Prayer, next: Prayer, now: Long, palette: Palette): Int = when {
-        prayer.timeMillis == next.timeMillis -> palette.red
-        prayer.timeMillis <= now -> palette.past
-        else -> palette.future
-    }
-
-    /**
-     * The Chronometer renders "MM:SS" (under an hour) or "H:MM:SS", then runs
-     * it through Formatter — precision lets us take just the numeric head of
-     * that string. The unit is a separate, smaller run. The format is fixed
-     * until the next re-render, so the AlarmHelper switch alarms land just
-     * after each crossing.
-     */
-    private fun countdownFormat(remainingMillis: Long): String = when {
-        remainingMillis >= 10 * HOUR -> "%1$.5s" // "10:45:00" -> "10:45"
-        remainingMillis >= HOUR -> "%1$.4s" // "1:08:48"   -> "1:08"
-        else -> "%1$.2s" // "47:59"     -> "47"
-    }
-
-    private fun countdownUnit(remainingMillis: Long): String =
-        if (remainingMillis >= HOUR) "HRS" else "MIN"
-
-    /**
-     * The launcher reports the current cell as min/max bounds in dp (the two
-     * bracket the live size; nothing OS sets them to the current cell). Small
-     * cells get the compact head.
-     */
-    private fun sizeOf(context: Context, appWidgetId: Int): Pair<Int, Int> {
         val options = AppWidgetManager.getInstance(context).getAppWidgetOptions(appWidgetId)
-        val width = maxOf(
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0),
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0),
+        val tap = tapIntent(context)
+        val theme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context else ThemeJob.themed(context)
+        val base = snapshot?.next?.let { SystemClock.elapsedRealtime() + it.timeMillis - now }
+        fun at(size: SizeF) = bind(theme, size, snapshot, loading, now, base, tap)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val sizes = widgetSizes(options).filter { it.width > 0 && it.height > 0 }.distinct()
+            if (sizes.size in 2..16) return RemoteViews(sizes.associateWith(::at))
+            if (sizes.size == 1) return at(sizes.single())
+        }
+
+        fun dimension(key: String, fallback: Float): Float =
+            options.getInt(key).takeIf { it > 0 }?.toFloat() ?: fallback
+
+        val portrait = SizeF(
+            dimension(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, DEFAULT_WIDTH),
+            dimension(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, DEFAULT_HEIGHT),
         )
-        val height = maxOf(
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0),
-            options.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0),
+        val landscape = SizeF(
+            dimension(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, portrait.width),
+            dimension(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, portrait.height),
         )
-        // Unknown (freshly placed, before the first options pass): assume the default cell.
-        return (if (width <= 0) DEFAULT_WIDTH_DP else width) to
-            (if (height <= 0) DEFAULT_HEIGHT_DP else height)
+        return if (portrait == landscape) at(portrait) else RemoteViews(at(landscape), at(portrait))
     }
 
-    private fun bindPlaceholder(
-        context: Context,
-        views: RemoteViews,
-        compact: Boolean,
-        heightDp: Int,
-        palette: Palette,
-    ) {
-        views.setChronometer(R.id.text_countdown, 0L, "--:--", false)
-        views.setTextViewText(R.id.text_prayer, "SYNCING")
-        views.setTextViewText(R.id.text_time, "--:--")
-        views.setImageViewBitmap(R.id.bar, SegmentBar.bitmap(context, null))
-        views.setTextColor(R.id.label_next, palette.label)
-        views.setTextColor(R.id.text_countdown, palette.label)
-        views.setTextColor(R.id.text_unit, palette.ink)
-        views.setTextColor(R.id.text_prayer, palette.ink)
-        views.setTextColor(R.id.text_time, palette.red)
-        views.setViewVisibility(R.id.text_time, View.GONE)
-        views.setViewVisibility(R.id.text_unit, View.GONE)
-
-        if (compact) {
-            val showTimes = heightDp >= COMPACT_TIMES_MIN_HEIGHT_DP
-            views.setViewVisibility(
-                R.id.names_row,
-                if (showTimes) View.VISIBLE else View.GONE,
-            )
-            views.setViewVisibility(
-                R.id.times_row,
-                if (showTimes) View.VISIBLE else View.GONE,
-            )
+    @android.annotation.SuppressLint("InlinedApi") // Only called on Android 12+.
+    @Suppress("DEPRECATION")
+    private fun widgetSizes(options: Bundle): List<SizeF> {
+        val key = AppWidgetManager.OPTION_APPWIDGET_SIZES
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            options.getParcelableArrayList(key, SizeF::class.java).orEmpty()
         } else {
+            options.getParcelableArrayList<SizeF>(key).orEmpty()
         }
     }
 
-    /** One theme's colours, resolved for the configuration this render runs in. */
-    private class Palette(context: Context) {
-        val ink = context.getColor(R.color.nt_white)
-        val red = context.getColor(R.color.nt_red)
-        val label = context.getColor(R.color.nt_grey_label)
-        val past = context.getColor(R.color.nt_grey_past)
-        val future = context.getColor(R.color.nt_grey_future)
-    }
+    private fun bind(
+        context: Context,
+        size: SizeF,
+        snapshot: Snapshot?,
+        loading: Boolean,
+        now: Long,
+        base: Long?,
+        tap: PendingIntent,
+    ): RemoteViews = RemoteViews(context.packageName, R.layout.widget).apply {
+        val short = size.height < 110f
+        val narrow = size.width < 155f
+        val showSchedule = size.width >= 140f && size.height >= 140f
+        val wide = size.width >= 230f
+        val next = snapshot?.next?.takeIf { it.timeMillis > now }
+        val remaining = next?.let { it.timeMillis - now } ?: 0L
 
-    /** Android resource ids are opaque, so the five columns are listed explicitly. */
-    private val rowNameIds = intArrayOf(
-        R.id.row_name_0,
-        R.id.row_name_1,
-        R.id.row_name_2,
-        R.id.row_name_3,
-        R.id.row_name_4,
-    )
-
-    private val rowTimeIds = intArrayOf(
-        R.id.row_time_0,
-        R.id.row_time_1,
-        R.id.row_time_2,
-        R.id.row_time_3,
-        R.id.row_time_4,
-    )
-
-    /** A tap: replace the content with the dot loading state until the job repaints. */
-    fun pushLoading(context: Context) {
-        val manager = AppWidgetManager.getInstance(context)
-        val ids = manager.getAppWidgetIds(
-            ComponentName(context, PrayerWidgetProvider::class.java),
+        setImageViewResource(
+            R.id.panel,
+            if (short) R.drawable.widget_bg_short else R.drawable.widget_bg_solid,
         )
-        if (ids.isEmpty()) return
-        val snapshot = PrayerRepository.snapshot(context)
-        ids.forEach { id ->
-            manager.updateAppWidget(id, render(context, id, snapshot, loading = true))
+        setOnClickPendingIntent(R.id.root, tap)
+        val density = context.resources.displayMetrics.density
+        fun px(dp: Int) = (dp * density + 0.5f).toInt()
+        val horizontal = px(if (wide && !short) 16 else 12)
+        val top = px(if (short) 7 else 12)
+        val bottom = px(if (short) 8 else 12)
+        setViewPadding(R.id.content, horizontal, top, horizontal, bottom)
+        visible(R.id.loading_spinner, loading)
+        visible(R.id.dot, !loading)
+        visible(R.id.label_next, !narrow && next != null)
+        setTextViewText(R.id.label_next, context.getText(if (loading) R.string.label_syncing else R.string.label_next))
+        setTextViewText(
+            R.id.text_prayer,
+            next?.kind?.label ?: context.getText(if (loading) R.string.label_syncing else R.string.label_unavailable),
+        )
+        visible(R.id.text_time, !showSchedule && next != null)
+        setTextViewText(R.id.text_time, next?.let { Format.clock(it.timeMillis) })
+        visible(R.id.schedule, showSchedule)
+
+        visible(R.id.countdown_empty, next == null)
+        visible(R.id.text_countdown, next != null)
+        visible(R.id.text_unit, next != null)
+        if (next != null && base != null) {
+            // Chronometer formats elapsed time in the launcher without an app wakeup.
+            val format = when {
+                remaining >= 10 * HOUR -> "%1$.5s"
+                remaining >= HOUR -> "%1$.4s"
+                else -> "%1$.2s"
+            }
+            setChronometerCountDown(R.id.text_countdown, true)
+            setChronometer(R.id.text_countdown, base, format, true)
+            setTextViewText(R.id.text_unit, context.getText(if (remaining >= HOUR) R.string.unit_hrs else R.string.unit_min))
+        } else {
+            setChronometer(R.id.text_countdown, 0L, null, false)
+        }
+
+        val fontScale = context.resources.configuration.fontScale.coerceAtLeast(1f)
+        val widthLimit = (size.width - 52f) / (3.15f * fontScale)
+        val heightLimit = (size.height - if (showSchedule) 70f else 32f) / fontScale
+        val countdownSize = minOf(widthLimit, heightLimit, if (wide) 52f else 38f).coerceAtLeast(14f)
+        for (id in intArrayOf(R.id.text_countdown, R.id.countdown_empty)) fontSize(id, countdownSize)
+        fontSize(R.id.text_unit, (countdownSize * 0.32f).coerceIn(8f, 15f))
+        fontSize(R.id.text_prayer, if (narrow) 9f else 12f)
+        fontSize(R.id.text_time, if (narrow) 9f else 12f)
+
+        for (id in intArrayOf(R.id.text_prayer, R.id.text_countdown, R.id.text_unit)) {
+            color(context, id, R.color.nt_white)
+        }
+        color(context, R.id.label_next, R.color.nt_grey_label)
+        color(context, R.id.countdown_empty, R.color.nt_grey_label)
+        color(context, R.id.text_time, R.color.nt_red)
+
+        PrayerKind.entries.forEachIndexed { index, kind ->
+            val active = next?.kind == kind
+            val prayer = if (active) next else snapshot?.today?.firstOrNull { it.kind == kind }
+            val past = !active && prayer != null && prayer.timeMillis <= now
+            val rail = when {
+                active -> R.drawable.rail_active
+                past -> R.drawable.rail_past
+                else -> R.drawable.rail_track
+            }
+            setImageViewResource(rails[index], rail)
+            if (showSchedule) {
+                setTextViewText(times[index], prayer?.let { Format.clock(it.timeMillis) }
+                    ?: context.getText(R.string.countdown_placeholder))
+                fontSize(names[index], if (wide) 9f else 7f)
+                fontSize(times[index], if (wide) 12f else 9f)
+                color(context, names[index], if (active) R.color.nt_white else R.color.nt_grey_label)
+                color(context, times[index], when {
+                    active -> R.color.nt_red
+                    past -> R.color.nt_grey_past
+                    else -> R.color.nt_white
+                })
+            }
         }
     }
 
-    /** The launcher sends this as us, so the receiver can stay unexported. */
-    private fun refreshPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, RefreshReceiver::class.java)
-            .setAction(RefreshReceiver.ACTION_REFRESH)
-        return PendingIntent.getBroadcast(
-            context,
-            REQUEST_REFRESH,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+    private fun RemoteViews.visible(id: Int, visible: Boolean) {
+        setViewVisibility(id, if (visible) View.VISIBLE else View.GONE)
     }
 
-    /** The one tap that also asks for notification permission, then refreshes. */
-    private fun permissionPendingIntent(context: Context): PendingIntent {
-        val intent = Intent(context, NotificationPermissionActivity::class.java)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
-        return PendingIntent.getActivity(
-            context,
-            REQUEST_PERMISSION,
-            intent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
+    private fun RemoteViews.fontSize(id: Int, size: Float) {
+        setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, size)
     }
 
-    /** Repaints every placed widget from the current cache. */
-    fun push(context: Context) {
+    private fun RemoteViews.color(context: Context, id: Int, color: Int) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) setColor(id, "setTextColor", color)
+        else setTextColor(id, context.getColor(color))
+    }
+
+    fun push(context: Context, loading: Boolean = false) {
         val manager = AppWidgetManager.getInstance(context)
-        val ids = manager.getAppWidgetIds(
-            ComponentName(context, PrayerWidgetProvider::class.java),
-        )
+        val ids = manager.getAppWidgetIds(ComponentName(context, PrayerWidgetProvider::class.java))
         if (ids.isEmpty()) return
-        val snapshot = PrayerRepository.snapshot(context)
+        val now = System.currentTimeMillis()
+        val snapshot = PrayerRepository.snapshot(context, now)
         ids.forEach { id ->
-            manager.updateAppWidget(id, render(context, id, snapshot))
+            manager.updateAppWidget(id, render(context, id, snapshot, loading, now))
+        }
+    }
+
+    private fun tapIntent(context: Context): PendingIntent {
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        return if (NotificationPermissionActivity.needsPrompt(context)) {
+            val intent = Intent(context, NotificationPermissionActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+            PendingIntent.getActivity(context, 6003, intent, flags)
+        } else {
+            val intent = Intent(context, RefreshReceiver::class.java).setAction(RefreshReceiver.ACTION_REFRESH)
+            PendingIntent.getBroadcast(context, 6001, intent, flags)
         }
     }
 }

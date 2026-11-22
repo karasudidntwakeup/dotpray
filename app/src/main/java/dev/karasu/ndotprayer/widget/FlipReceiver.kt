@@ -26,6 +26,8 @@ class FlipReceiver : BroadcastReceiver() {
             AlarmHelper.ACTION_FLIP,
             AlarmHelper.ACTION_FLIP_SAFETY,
             AlarmHelper.ACTION_FORMAT,
+            Intent.ACTION_TIME_CHANGED,
+            Intent.ACTION_TIMEZONE_CHANGED,
             Intent.ACTION_BOOT_COMPLETED,
             Intent.ACTION_MY_PACKAGE_REPLACED -> Unit
             else -> return
@@ -49,7 +51,7 @@ class FlipReceiver : BroadcastReceiver() {
             return
         }
         ids.forEach { id ->
-            manager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
+            manager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot, now = now))
         }
 
         if (intent.action == AlarmHelper.ACTION_FLIP) {
@@ -62,7 +64,7 @@ class FlipReceiver : BroadcastReceiver() {
         }
 
         PrayerWidgetProvider.reschedule(context, snapshot?.next)
-        ThemeJob.schedule(context, replace = true)
+        ThemeJob.schedule(context)
         PrayerWidgetProvider.refreshIfNeeded(context)
     }
 }

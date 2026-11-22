@@ -6,23 +6,20 @@ generic Android widget.
 
 ## What it shows
 
-**Full (4×2)** — the next prayer, a live countdown, a five-rail prayer bar, and
-all five names and times in a table below it. Each rail sits over its prayer
-column: red on the next prayer, ink behind it, track ahead. Every label and
-number uses the dot face; the next time is the only red time.
+Wide widgets show the next prayer, a live countdown, and the five daily
+prayer times. The red rail marks the next prayer. Filled grey rails mark
+prayers that have passed, and pale tracks mark later prayers. After Isha,
+the Fajr column shows tomorrow's time when it is cached.
 
-**Compact (2×2 and smaller)** — the countdown, the next prayer, and the same
-five-rail bar. When the cell is tall enough, every prayer name and time appears
-under the bar (Fajr included); short cells drop that strip instead of clipping
-it. There is no date clutter, and no time is repeated.
-
-The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the unit
-(`HRS` or `MIN`) is set smaller on the number's baseline.
+The layout adapts to the space the launcher provides. Smaller tiles keep the
+countdown, next prayer, and rails in view. The countdown displays `H:MM HRS`
+until the last hour, then switches to `MM MIN`.
 
 ## Using it
 
 - Tap the widget to refresh the location and timings on demand. While the fetch
-  runs, the status line shows `SYNCING` and the rail stays in place.
+  runs, a rotating dot indicator appears while cached times and the countdown
+  stay visible.
 - When a prayer arrives, a Nothing-styled notification announces it with the
   prayer name, time and a red dot; the widget then settles on the next prayer.
   Tapping the notification refreshes the widget. On Android 13+, the first
@@ -42,20 +39,20 @@ The countdown switches from `H:MM` to `NN MIN` inside the last hour, and the uni
 - Prayer times come from the [Aladhan API](https://aladhan.com/prayer-times-api)
   (method 3, Muslim World League; Hanafi). Location is detected from `ipwho.is`
   and re-detected on each refresh.
-- The countdown is a host-side `Chronometer`, so there are no per-minute wakeups.
-  Alarms only mark the boundaries: the flip at each prayer (exact,
-  allow-while-idle, with a short safety re-render behind it) and the two
-  countdown format switches, plus the pre-prayer reminder on Phone (2). The flip repaints the widget and posts the
-  prayer-arrival notification. A content-triggered job watches the system night
-  setting and repaints as soon as the light/dark toggle changes; automatic
-  sunset switches and anything the job misses are bounded by the 30-minute
-  update, which also re-arms the alarms.
-- The rounded panel and the segmented bar are painted to bitmaps: widgets cannot
-  inflate custom views, so both travel to the launcher as pixels.
-- Light and dark palettes follow the system: a white panel (`#FFFFFF`) with
-  near-black ink in light mode, the Nothing grey panel (`#151515`) with white ink
-  in dark. The corner radii match Nothing's own widgets, and Nothing Red
-  (`#FF3030`) marks the next prayer's time and the leading segment of the bar.
+- The countdown uses the launcher's `Chronometer`. The app schedules wakeups
+  at prayer boundaries and when the countdown format changes. On Phone (2),
+  there is also a wakeup for the pre-prayer reminder.
+- Android 12 and later can select from layouts sized for the space reported by
+  the launcher and resolve widget colors in the host configuration. Older
+  launchers receive portrait and landscape layouts, with a theme-watch job
+  for explicit night mode changes.
+- The panel, rails and sync indicator use native drawable resources. Light mode
+  uses a white panel with a darker red accent for legibility. Dark mode uses
+  a charcoal panel with a brighter red accent. The layout uses Nothing's dot
+  type for the countdown and system sans for the schedule.
+- Refreshes commit the location and timings together. If a request fails, the
+  last successful cache remains available. Old days are pruned on a successful
+  refresh.
 
 Widget only: no launcher entry and no settings screen. The only activity is an
 invisible notification-permission prompt, opened from a widget tap on Android
@@ -128,6 +125,5 @@ dotpray.
 
 ### Fonts
 
-Every label and number uses Nothing's `NDot55All` system dot family, so the
-widget matches the phone's own dot typography. No fonts are bundled; on a
-non-Nothing device the family falls back to the system sans-serif.
+The countdown uses Nothing's `NDot55All` system family, with a system
+sans-serif fallback. The app bundles no fonts.

@@ -19,8 +19,8 @@ android {
         applicationId = "dev.karasu.ndotprayer"
         minSdk = 26
         targetSdk = 37
-        versionCode = 7
-        versionName = "3.1"
+        versionCode = 9
+        versionName = "4.1"
     }
 
     signingConfigs {
@@ -36,7 +36,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

@@ -14,7 +14,7 @@ class RefreshReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action != ACTION_REFRESH) return
-        WidgetRenderer.pushLoading(context)
+        WidgetRenderer.push(context, loading = true)
         if (!RefreshJob.scheduleManual(context)) WidgetRenderer.push(context)
     }
 

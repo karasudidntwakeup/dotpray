@@ -26,7 +26,7 @@ data class RawTimings(
 object AladhanApi {
 
     private const val BASE = "https://api.aladhan.com/v1/timings/"
-    private const val DATE_FORMAT = "dd-MM-yyyy"
+    private val dateFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy", Locale.US)
 
     fun timings(
         date: LocalDate,
@@ -36,7 +36,7 @@ object AladhanApi {
         school: Int,
         timeZoneId: String,
     ): RawTimings {
-        val formatted = date.format(DateTimeFormatter.ofPattern(DATE_FORMAT, Locale.US))
+        val formatted = date.format(dateFormatter)
         val zone = URLEncoder.encode(timeZoneId, "UTF-8")
         val url = URL(
             "$BASE$formatted?latitude=$latitude&longitude=$longitude" +
@@ -47,7 +47,7 @@ object AladhanApi {
             requestMethod = "GET"
             connectTimeout = 10_000
             readTimeout = 15_000
-            setRequestProperty("User-Agent", "dotpray/1.4 (Android)")
+            setRequestProperty("User-Agent", "dotpray (Android)")
         }
 
         try {
@@ -90,27 +90,27 @@ object AladhanApi {
     class ApiException(message: String) : java.io.IOException(message)
 }
 
-    /** Coarse IP geolocation by HTTPS, with no runtime location permission or API key. */
-    object LocationDetector {
+/** Coarse IP geolocation by HTTPS, with no runtime location permission or API key. */
+object LocationDetector {
 
-        fun detect(): Pair<Double, Double>? = runCatching {
-            val url = URL("https://ipwho.is/")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 8_000
-                readTimeout = 8_000
-                setRequestProperty("User-Agent", "dotpray/1.4 (Android)")
-            }
-            try {
-                if (connection.responseCode !in 200..299) return null
-                val body = connection.inputStream.bufferedReader().use(BufferedReader::readText)
-                val json = JSONObject(body)
-                if (!json.optBoolean("success", false)) return null
-                val lat = json.getDouble("latitude")
-                val lon = json.getDouble("longitude")
-                if (lat.isNaN() || lon.isNaN()) null else lat to lon
-            } finally {
-                connection.disconnect()
-            }
-        }.getOrNull()
-    }
+    fun detect(): Pair<Double, Double>? = runCatching {
+        val url = URL("https://ipwho.is/")
+        val connection = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "GET"
+            connectTimeout = 8_000
+            readTimeout = 8_000
+            setRequestProperty("User-Agent", "dotpray (Android)")
+        }
+        try {
+            if (connection.responseCode !in 200..299) return null
+            val body = connection.inputStream.bufferedReader().use(BufferedReader::readText)
+            val json = JSONObject(body)
+            if (!json.optBoolean("success", false)) return null
+            val lat = json.getDouble("latitude")
+            val lon = json.getDouble("longitude")
+            if (lat in -90.0..90.0 && lon in -180.0..180.0) lat to lon else null
+        } finally {
+            connection.disconnect()
+        }
+    }.getOrNull()
+}

@@ -44,6 +44,7 @@ object RefreshJob {
     /** A widget tap: always fetch, and re-detect the location once. */
     fun scheduleManual(context: Context): Boolean {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return false
+        if (scheduler.getPendingJob(JOB_MANUAL) != null) return true
         val extras = PersistableBundle().apply { putBoolean(EXTRA_RELOCATE, true) }
         val info = JobInfo.Builder(JOB_MANUAL, ComponentName(context, RefreshWorker::class.java))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
@@ -51,19 +52,18 @@ object RefreshJob {
             .setOverrideDeadline(30_000L)
             .setExtras(extras)
             .build()
-        scheduler.cancel(JOB_MANUAL)
         return scheduler.schedule(info) == JobScheduler.RESULT_SUCCESS
     }
 
     /** Hourly keeper so the countdown survives midnight and offline days. */
     fun schedulePeriodic(context: Context) {
         val scheduler = context.getSystemService(JobScheduler::class.java) ?: return
+        if (scheduler.getPendingJob(JOB_PERIODIC) != null) return
         val info = JobInfo.Builder(JOB_PERIODIC, ComponentName(context, RefreshWorker::class.java))
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
             .setPeriodic(60 * 60 * 1000L)
             .setPersisted(true)
             .build()
-        scheduler.cancel(JOB_PERIODIC)
         scheduler.schedule(info)
     }
 

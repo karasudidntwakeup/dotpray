@@ -34,9 +34,10 @@ class PrayerWidgetProvider : AppWidgetProvider() {
         // system for this provider's own widgets, so an update that did not come
         // from the launcher cannot point us at widgets we do not own.
         val ids = appWidgetManager.getAppWidgetIds(component(context))
-        val snapshot = PrayerRepository.snapshot(context)
+        val now = System.currentTimeMillis()
+        val snapshot = PrayerRepository.snapshot(context, now)
         ids.forEach { id ->
-            appWidgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot))
+            appWidgetManager.updateAppWidget(id, WidgetRenderer.render(context, id, snapshot, now = now))
         }
         reschedule(context, snapshot?.next)
         ThemeJob.schedule(context)
@@ -136,6 +137,8 @@ object AlarmHelper {
                 manager, context, REQUEST_REMINDER, triggerAtMillis - REMINDER_LEAD,
                 ACTION_REMINDER, prayerTime = triggerAtMillis,
             )
+        } else if (remaining > REMINDER_LEAD) {
+            cancel(manager, context, REQUEST_REMINDER, ACTION_REMINDER)
         }
 
         // Just past the 10-hour crossing: "10:45" must switch to the form
@@ -146,7 +149,7 @@ object AlarmHelper {
             cancel(manager, context, REQUEST_HOURS10, ACTION_FORMAT)
         }
 
-        // Just past the hour crossing: "1:07" must switch to "67 MIN". The
+        // Just past the hour crossing: "1:07" must switch to "59 MIN". The
         // grace keeps delivery strictly below one hour.
         if (remaining > HOUR) {
             set(manager, context, REQUEST_HOUR1, triggerAtMillis - HOUR + GRACE, ACTION_FORMAT)

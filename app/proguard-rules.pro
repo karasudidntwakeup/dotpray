@@ -1,1 +1,1 @@
-# Keep nothing custom; minify is off for this app.
+# No app-specific keep rules. Android components are kept from the manifest.

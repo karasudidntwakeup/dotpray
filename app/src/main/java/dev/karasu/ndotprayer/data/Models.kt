@@ -1,7 +1,6 @@
 package dev.karasu.ndotprayer.data
 
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -37,15 +36,17 @@ data class DayTimings(
 
 /** Everything the widget needs for one render pass. */
 data class Snapshot(
-    val next: Prayer,
+    val next: Prayer?,
     val today: List<Prayer>,
 )
 
 /** Pure formatting helpers shared by the widget and the renderer. */
 object Format {
 
+    private val clockFormatter = DateTimeFormatter.ofPattern("HH:mm", Locale.US)
+
     fun clock(millis: Long): String =
-        DateTimeFormatter.ofPattern("HH:mm", Locale.US).format(
+        clockFormatter.format(
             java.time.Instant.ofEpochMilli(millis).atZone(java.time.ZoneId.systemDefault()),
         )
 }

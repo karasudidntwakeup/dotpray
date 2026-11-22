@@ -16,8 +16,6 @@ object PrayerRepository {
 
     fun zone(): ZoneId = ZoneId.systemDefault()
 
-    fun today(): LocalDate = LocalDate.now(zone())
-
     /** Null when nothing is cached yet — the widget shows a placeholder and refreshes. */
     fun snapshot(context: Context, nowMillis: Long = System.currentTimeMillis()): Snapshot? {
         val prefs = Prefs.get(context)
@@ -25,8 +23,6 @@ object PrayerRepository {
         val prayers = prefs.getDay(date)?.prayers?.sortedBy { it.timeMillis } ?: return null
         val next = prayers.firstOrNull { it.timeMillis > nowMillis }
             ?: prefs.getDay(date.plusDays(1))?.prayers?.firstOrNull { it.kind == PrayerKind.FAJR }
-            ?: prayers.lastOrNull()
-            ?: return null
         return Snapshot(next = next, today = prayers)
     }
 
@@ -34,7 +30,7 @@ object PrayerRepository {
     fun needsRefresh(context: Context, nowMillis: Long = System.currentTimeMillis()): Boolean {
         val prefs = Prefs.get(context)
         val zone = zone()
-        val date = LocalDate.now(zone)
+        val date = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
         if (prefs.cachedSignature() != prefs.signature(zone.id)) return true
         val today = prefs.getDay(date) ?: return true
         if (today.fetchedAtMillis > nowMillis) return true
@@ -47,60 +43,42 @@ object PrayerRepository {
      * happens on demand ([relocate]) or once on first setup, so background
      * refreshes never move the widget.
      */
+    @Synchronized
     fun refresh(context: Context, relocate: Boolean = false): Boolean {
         val prefs = Prefs.get(context)
         val zone = zone()
-
-        if (relocate || !prefs.hasLocation) {
-            LocationDetector.detect()?.let { (lat, lon) ->
-                val changed = lat != prefs.latitude || lon != prefs.longitude
-                // Persist the fix even when it matches the default, so later
-                // background refreshes stay local-only.
-                prefs.latitude = lat
-                prefs.longitude = lon
-                if (changed) prefs.clearCache()
-            }
-        }
-
         val date = LocalDate.now(zone)
-        val todayFetched = fetchAndStore(context, date) == true
-        // Tomorrow is a nice-to-have: without it the widget still works today.
-        fetchAndStore(context, date.plusDays(1))
+        val location = if (relocate || !prefs.hasLocation) LocationDetector.detect() else null
+        val latitude = location?.first ?: prefs.latitude
+        val longitude = location?.second ?: prefs.longitude
 
-        prefs.storeSignature(prefs.signature(zone.id))
-        return todayFetched
+        val today = fetch(date, zone, latitude, longitude) ?: return false
+        val tomorrow = fetch(date.plusDays(1), zone, latitude, longitude)
+        prefs.storeTimings(latitude, longitude, location != null, zone.id, today, tomorrow)
+        return true
     }
 
-    private fun fetchAndStore(context: Context, date: LocalDate): Boolean {
-        val prefs = Prefs.get(context)
+    private fun fetch(date: LocalDate, zone: ZoneId, latitude: Double, longitude: Double): DayTimings? {
         return try {
             val raw = AladhanApi.timings(
                 date = date,
-                latitude = prefs.latitude,
-                longitude = prefs.longitude,
+                latitude = latitude,
+                longitude = longitude,
                 method = Prefs.DEFAULT_METHOD,
                 school = Prefs.DEFAULT_SCHOOL,
-                timeZoneId = zone().id,
+                timeZoneId = zone.id,
             )
-            prefs.putDay(
-                DayTimings(
-                    date = date,
-                    prayers = PrayerKind.ORDERED.map { kind ->
-                        val time = raw.times.getValue(kind)
-                        Prayer(
-                            kind = kind,
-                            timeMillis = java.time.ZonedDateTime.of(date, time, zone())
-                                .toInstant()
-                                .toEpochMilli(),
-                        )
-                    },
-                    fetchedAtMillis = System.currentTimeMillis(),
-                ),
+            DayTimings(
+                date = date,
+                prayers = PrayerKind.ORDERED.map { kind ->
+                    val time = raw.times.getValue(kind)
+                    Prayer(kind, date.atTime(time).atZone(zone).toInstant().toEpochMilli())
+                },
+                fetchedAtMillis = System.currentTimeMillis(),
             )
-            true
         } catch (error: Exception) {
             Log.w(TAG, "fetch $date failed: ${error.javaClass.simpleName}: ${error.message}")
-            false
+            null
         }
     }
 
